@@ -1,0 +1,15 @@
+# Streamlit シークレット（本物はコミット禁止）
+.streamlit/secrets.toml
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+
+# エディタ
+.vscode/
+.idea/
+.DS_Store
