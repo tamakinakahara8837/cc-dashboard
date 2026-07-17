@@ -12,7 +12,10 @@ from typing import Optional
 import pandas as pd
 
 from data_loader import (
+    BANSHAKU_CANCEL_SET,
+    BANSHAKU_COURSE_CHANGE_SET,
     BANSHAKU_ORDER,
+    BANSHAKU_RETENTION_SET,
     REQUEST_MAIN_CATEGORIES,
     REQUEST_OTHER_LABEL,
     SUBSCRIPTION_ORDER,
@@ -301,47 +304,80 @@ def compare_by(
 # 晩酌応援コース
 # ─────────────────────────────────────────────
 
+def detect_special_course_name(df: pd.DataFrame) -> str:
+    """特別コース（晩酌応援 / すまいる応援）の実データ上の名称を自動検出。
+
+    banshaku_category が入っている行のうち最も多い course 名を返す。
+    データが無ければデフォルト表記を返す。
+    """
+    if df.empty or "banshaku_category" not in df.columns:
+        return "対応内容"
+    sub = df[df["banshaku_category"].fillna("") != ""]
+    if sub.empty:
+        return "対応内容"
+    top = sub["course"].value_counts()
+    return top.index[0] if len(top) else "対応内容"
+
+
 def banshaku_scope(df: pd.DataFrame) -> pd.DataFrame:
-    """晩酌応援コースの行だけ切り出す。"""
+    """特別コース（晩酌応援 / すまいる応援）の行だけ切り出す。
+
+    course 名で絞らず、banshaku_category（対応内容分類）が入力されている行を対象にする。
+    こうすることでブランドをまたいで自動対応できる。
+    """
     if df.empty:
         return df
-    return df[df["course"] == "晩酌応援コース"].copy()
+    return df[df["banshaku_category"].fillna("") != ""].copy()
 
 
 def banshaku_kpis(df: pd.DataFrame) -> list[Kpi]:
+    """特別コースの主要 KPI。ブランドに応じて表示ラベルを変える。"""
     ban = banshaku_scope(df)
     total = len(ban)
+    course_name = detect_special_course_name(df)
+    # 表示用の短縮ラベル（「◯◯応援コース」→「◯◯」）
+    short = course_name.replace("応援コース", "").replace("コース", "") or course_name
     if total == 0:
         return [
-            Kpi("晩酌 応対件数", "0"),
+            Kpi(f"{short} 応対件数", "0"),
             Kpi("継続了承・成功", "0"),
-            Kpi("解約 (満了・途中)", "0"),
+            Kpi("解約", "0"),
             Kpi("継続成功率", "—", help="対象データなし"),
         ]
     counts = ban["banshaku_category"].value_counts().to_dict()
-    reten = sum(counts.get(c, 0) for c in ("満了未満継続了承", "満了継続応援成功"))
-    canc = sum(counts.get(c, 0) for c in ("満了解約", "差額あり途中解約", "差額なし途中解約"))
+    reten = sum(counts.get(c, 0) for c in BANSHAKU_RETENTION_SET)
+    canc = sum(counts.get(c, 0) for c in BANSHAKU_CANCEL_SET)
+    change = sum(counts.get(c, 0) for c in BANSHAKU_COURSE_CHANGE_SET)
     denom = reten + canc
     rate = safe_ratio(reten, denom)
-    return [
-        Kpi("晩酌 応対件数", _fmt_int(total)),
+    kpis = [
+        Kpi(f"{short} 応対件数", _fmt_int(total)),
         Kpi(
             "継続了承・成功", _fmt_int(reten),
-            help="満了未満継続了承 + 満了継続応援成功",
+            help=" + ".join(sorted(BANSHAKU_RETENTION_SET)),
         ),
         Kpi(
-            "解約 (満了・途中)", _fmt_int(canc),
-            help="満了解約 + 差額あり途中解約 + 差額なし途中解約",
+            "解約", _fmt_int(canc),
+            help=" + ".join(sorted(BANSHAKU_CANCEL_SET)),
         ),
         Kpi(
             "継続成功率", _fmt_pct(rate),
-            help=f"継続 {reten} / (継続+解約 {denom})",
+            help=f"継続 {reten} / (継続+解約 {denom})　※コース変更は分母から除外",
         ),
     ]
+    # スマイル開始前コース変更が存在する場合のみ4枚目に追加
+    if change > 0:
+        kpis.append(
+            Kpi(
+                "スマイル開始前 コース変更", _fmt_int(change),
+                help="スマイル開始前にコース変更した件数（継続・解約とは別カウント）",
+            )
+        )
+    return kpis
 
 
 def banshaku_breakdown(df: pd.DataFrame) -> pd.DataFrame:
-    """晩酌応援コース対応内容の 5 カテゴリ内訳。"""
+    """特別コース対応内容のカテゴリ内訳（実データにあるカテゴリのみ表示）。"""
     ban = banshaku_scope(df)
     ban = ban[ban["banshaku_category"] != ""]
     if ban.empty:

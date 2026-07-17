@@ -129,24 +129,30 @@ def share_bar(df: pd.DataFrame, category_col: str, title: str) -> go.Figure:
 
 
 BANSHAKU_COLORS = {
+    # 解約系（赤〜橙）
     "満了解約": "#c62828",
     "差額あり途中解約": "#ef6c00",
     "差額なし途中解約": "#f9a825",
+    "スマイル開始前解約": "#ad1457",
+    # 継続系（緑〜青）
     "満了未満継続了承": "#2e7d32",
     "満了継続応援成功": "#1565c0",
+    "スマイル開始前継続了承": "#00897b",
+    # コース変更（グレー系）
+    "スマイル開始前コース変更": "#6a1b9a",
     "その他": "#9e9e9e",
 }
 
 
-def banshaku_bar(df: pd.DataFrame) -> go.Figure:
-    """晩酌応援コース 5 カテゴリ内訳（件数+%）。"""
+def banshaku_bar(df: pd.DataFrame, title: str = "特別コース 対応内容の内訳") -> go.Figure:
+    """特別コース（晩酌応援 or すまいる応援）カテゴリ内訳（件数+%）。"""
     if df.empty:
-        return _empty_fig("晩酌応援コースの対応内容がありません")
+        return _empty_fig("対応内容データがありません")
     fig = px.bar(
         df, x="category", y="count",
         color="category", color_discrete_map=BANSHAKU_COLORS,
         text=[f"{c}<br>{s * 100:.1f}%" for c, s in zip(df["count"], df["share"])],
-        title="晩酌応援コース 対応内容の内訳",
+        title=title,
     )
     fig.update_traces(textposition="outside", cliponaxis=False)
     fig.update_layout(

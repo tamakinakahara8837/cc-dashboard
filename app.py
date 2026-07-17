@@ -28,12 +28,16 @@ from data_loader import (
     TEAMS,
     apply_ops_filters,
     apply_rate_filters,
+    load_brand_name,
     load_data,
     previous_period,
 )
 
+BRAND = load_brand_name()
+DASHBOARD_TITLE = f"{BRAND}ダッシュボード"
+
 st.set_page_config(
-    page_title="hajuCSダッシュボード", page_icon="📊", layout="wide",
+    page_title=DASHBOARD_TITLE, page_icon="📊", layout="wide",
 )
 
 # ─────────────────────────────────────────────
@@ -283,7 +287,7 @@ if show_prev:
 # ─────────────────────────────────────────────
 # ヘッダ
 # ─────────────────────────────────────────────
-st.title("📊 hajuCSダッシュボード")
+st.title(f"📊 {DASHBOARD_TITLE}")
 st.caption(
     f"期間: {date_from} 〜 {date_to} ／ 対象 {len(fdf):,} 件 ／ "
     f"コールセンター: {', '.join(call_centers) if call_centers else '（未選択）'}"
@@ -551,12 +555,14 @@ with tab_ag2:
 st.markdown("---")
 
 # ─────────────────────────────────────────────
-# 🌙 晩酌応援コース 内訳
+# 🌟 特別コース 内訳（hajuCS: 晩酌応援 / Co-HeartCS: すまいる応援 など、実データから自動検出）
 # ─────────────────────────────────────────────
-st.markdown("### 🌙 晩酌応援コース 内訳")
+_special_course = metrics.detect_special_course_name(fdf)
+_emoji = "🌙" if "晩酌" in _special_course else ("🌈" if "すまいる" in _special_course or "スマイル" in _special_course else "🌟")
+st.markdown(f"### {_emoji} {_special_course} 内訳")
 st.caption(
-    "解約系（満了解約 / 差額あり途中解約 / 差額なし途中解約）＋ "
-    "継続系（満了未満継続了承 / 満了継続応援成功）で分類。"
+    "対応内容の分類。解約系（満了解約 / 途中解約 / スマイル開始前解約など）＋ "
+    "継続系（満了未満継続了承 / 満了継続応援成功 / スマイル開始前継続了承）で集計します。"
 )
 banshaku_kpis = metrics.banshaku_kpis(fdf)
 cols = st.columns(len(banshaku_kpis))
@@ -565,7 +571,10 @@ for c, k in zip(cols, banshaku_kpis):
 
 ban_df = metrics.banshaku_breakdown(fdf)
 if not ban_df.empty:
-    st.plotly_chart(charts.banshaku_bar(ban_df), use_container_width=True)
+    st.plotly_chart(
+        charts.banshaku_bar(ban_df, title=f"{_special_course} 対応内容の内訳"),
+        use_container_width=True,
+    )
     st.dataframe(
         ban_df.assign(share=lambda d: (d["share"] * 100).round(1).astype(str) + "%"),
         use_container_width=True, hide_index=True,

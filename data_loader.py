@@ -26,7 +26,11 @@ import streamlit as st
 # シート定義
 # ─────────────────────────────────────────────
 
-SHEETS: dict[str, str] = {
+# ─────────────────────────────────────────────
+# シート定義（デフォルトは hajuCS。他ブランドは Streamlit Cloud の Secrets で上書き）
+# ─────────────────────────────────────────────
+
+_DEFAULT_SHEETS: dict[str, str] = {
     "LU": (
         "https://docs.google.com/spreadsheets/d/e/"
         "2PACX-1vTWiegDekNpBX51UlMNzcfdDolAalIj1vFFm5CZvsazIVIdqxyFYGxf2RjXuo_4y0lN4fjpzIyU7y8M"
@@ -36,6 +40,39 @@ SHEETS: dict[str, str] = {
         "2PACX-1vThXucwZtFi5pgYC0IODHVjgIAXJYy8Ntcip7YAqXOv5jmsEhmY02yD9YGWcs58qrRnpabFtpDbjOOx"
     ),
 }
+
+DEFAULT_BRAND_NAME = "hajuCS"
+
+
+def _load_sheets_from_secrets() -> dict[str, str]:
+    """`st.secrets["sheets"]` からシート URL を読む。無ければデフォルトを返す。
+
+    Secrets の書式例:
+        [sheets]
+        LU = "https://docs.google.com/spreadsheets/d/e/xxxxx"
+        N2 = "https://docs.google.com/spreadsheets/d/e/yyyyy"
+    """
+    try:
+        cfg = st.secrets.get("sheets", None)
+        if cfg:
+            return {str(k): str(v) for k, v in dict(cfg).items() if v}
+    except Exception:
+        pass
+    return dict(_DEFAULT_SHEETS)
+
+
+def load_brand_name() -> str:
+    """`st.secrets["brand"]["name"]` からブランド名を読む。無ければデフォルト。"""
+    try:
+        name = st.secrets["brand"]["name"]
+        if name:
+            return str(name)
+    except Exception:
+        pass
+    return DEFAULT_BRAND_NAME
+
+
+SHEETS: dict[str, str] = _load_sheets_from_secrets()
 
 OPS_TAB_NAME = "応対記録"
 MONTHLY_TAB_PATTERN = re.compile(r"^\s*(\d{4})年\s*(\d{1,2})月\s*$")
@@ -52,6 +89,7 @@ COLUMN_RENAME = {
     "継続応援は行いましたか？": "retention_result",
     "晩酌対応内容": "banshaku_action",
     "対応内容": "banshaku_action",  # N2 側は「対応内容」表記
+    "すまいる応援対応内容": "banshaku_action",  # Co-HeartCS はスマイル応援コース
     "解約希望理由を選択してください(複数選択可)": "cancel_reason",
     "VOCの入力があればお願いします！": "voc",
     "温度感が上がってしまった原因の選択をお願いします(複数選択可)": "escalation_cause",
@@ -83,16 +121,29 @@ REQUEST_MAIN_CATEGORIES: list[str] = [
 ]
 REQUEST_OTHER_LABEL = "その他"
 
-# 晩酌応援コースの対応内容カテゴリ（解約系 3 + 継続系 2）
+# 特別コース対応内容カテゴリ
+# hajuCS: 晩酌応援コース → 満了系5カテゴリ
+# Co-HeartCS: すまいる応援コース → 満了系5 + スマイル開始前系3
 BANSHAKU_ORDER: list[str] = [
+    # 解約系
     "満了解約",
     "差額あり途中解約",
     "差額なし途中解約",
+    "スマイル開始前解約",
+    # 継続系
     "満了未満継続了承",
     "満了継続応援成功",
+    "スマイル開始前継続了承",
+    # 開始前ムーブ（コース変更）
+    "スマイル開始前コース変更",
 ]
-BANSHAKU_CANCEL_SET: set[str] = {"満了解約", "差額あり途中解約", "差額なし途中解約"}
-BANSHAKU_RETENTION_SET: set[str] = {"満了未満継続了承", "満了継続応援成功"}
+BANSHAKU_CANCEL_SET: set[str] = {
+    "満了解約", "差額あり途中解約", "差額なし途中解約", "スマイル開始前解約",
+}
+BANSHAKU_RETENTION_SET: set[str] = {
+    "満了未満継続了承", "満了継続応援成功", "スマイル開始前継続了承",
+}
+BANSHAKU_COURSE_CHANGE_SET: set[str] = {"スマイル開始前コース変更"}
 
 
 # ─────────────────────────────────────────────
@@ -148,10 +199,23 @@ def _categorize_request(request: str) -> str:
 
 
 def _categorize_banshaku(value: str) -> str:
-    """晩酌対応内容を 5 カテゴリ（+ その他）に分類。"""
+    """特別コース（晩酌応援 / すまいる応援）対応内容を分類。
+
+    共通カテゴリ:
+      - 満了解約
+      - 差額あり途中解約 / 差額なし途中解約 （満了未満途中解約から派生）
+      - 満了未満継続了承
+      - 満了継続応援成功
+
+    Co-HeartCS 固有:
+      - スマイル開始前解約
+      - スマイル開始前継続了承
+      - スマイル開始前コース変更
+    """
     if not isinstance(value, str) or not value.strip():
         return ""
     v = value.strip()
+    # 共通カテゴリ
     if v == "満了解約":
         return "満了解約"
     if v == "満了未満継続了承":
@@ -160,6 +224,14 @@ def _categorize_banshaku(value: str) -> str:
         return "満了継続応援成功"
     if "満了未満途中解約" in v:
         return "差額なし途中解約" if "差額なし" in v else "差額あり途中解約"
+    # Co-HeartCS 固有（スマイル開始前）
+    if "スマイル開始前" in v or "すまいる開始前" in v:
+        if "解約" in v:
+            return "スマイル開始前解約"
+        if "継続了承" in v or "継続" in v:
+            return "スマイル開始前継続了承"
+        if "コース変更" in v or "変更" in v:
+            return "スマイル開始前コース変更"
     return REQUEST_OTHER_LABEL
 
 
