@@ -16,7 +16,6 @@ import io
 import re
 import unicodedata
 import urllib.request
-from dataclasses import dataclass
 from typing import Optional
 
 import pandas as pd
@@ -437,12 +436,22 @@ def csv_reader_from_string(text: str):
 # 統合ローダ
 # ─────────────────────────────────────────────
 
-@dataclass
 class LoadResult:
-    ops: pd.DataFrame          # 応対記録 (両シート結合、call_center 列付き)
-    rates: pd.DataFrame        # 月次 応答率・完了率 (長形式)
-    loaded_at: pd.Timestamp
-    monthly_tabs: dict[str, list[str]]   # シート名 → 月次タブ名リスト
+    """`load_data()` の戻り値（Python 3.14 の dataclass 互換性問題を避けて素のクラスで実装）。"""
+
+    __slots__ = ("ops", "rates", "loaded_at", "monthly_tabs")
+
+    def __init__(
+        self,
+        ops: pd.DataFrame,
+        rates: pd.DataFrame,
+        loaded_at: pd.Timestamp,
+        monthly_tabs: dict,
+    ) -> None:
+        self.ops = ops                    # 応対記録 (両シート結合、call_center 列付き)
+        self.rates = rates                # 月次 応答率・完了率 (長形式)
+        self.loaded_at = loaded_at
+        self.monthly_tabs = monthly_tabs  # シート名 → 月次タブ名リスト
 
 
 @st.cache_data(ttl=600, show_spinner="スプレッドシートを取得中…")

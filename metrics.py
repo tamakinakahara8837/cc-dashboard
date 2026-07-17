@@ -6,7 +6,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Optional
 
 import pandas as pd
@@ -23,13 +22,24 @@ from data_loader import (
 )
 
 
-@dataclass
 class Kpi:
-    label: str
-    value: str
-    help: Optional[str] = None
-    ratio: Optional[float] = None
-    delta: Optional[str] = None
+    """KPI 表示用の値持ちオブジェクト（Python 3.14 の dataclass 互換性問題を避けるため素のクラスで実装）。"""
+
+    __slots__ = ("label", "value", "help", "ratio", "delta")
+
+    def __init__(
+        self,
+        label: str,
+        value: str,
+        help: Optional[str] = None,
+        ratio: Optional[float] = None,
+        delta: Optional[str] = None,
+    ) -> None:
+        self.label = label
+        self.value = value
+        self.help = help
+        self.ratio = ratio
+        self.delta = delta
 
 
 def _fmt_int(n: int) -> str:
