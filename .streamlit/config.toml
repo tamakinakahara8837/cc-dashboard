@@ -1,8 +1,14 @@
 [theme]
-primaryColor = "#1976d2"
-backgroundColor = "#ffffff"
-secondaryBackgroundColor = "#f5f7fa"
-textColor = "#212121"
+# ベース: ホワイト（明るく）
+base = "light"
+# メイン背景: とても淡いクリーム
+backgroundColor = "#fffdf0"
+# サイドバー/カード等の副背景: 少し濃い薄黄
+secondaryBackgroundColor = "#fff5d1"
+# アクセント: 深めのゴールド
+primaryColor = "#e0a800"
+# 本文テキスト
+textColor = "#3a2e0a"
 font = "sans serif"
 
 [server]

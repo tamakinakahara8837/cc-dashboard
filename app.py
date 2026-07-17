@@ -33,7 +33,103 @@ from data_loader import (
 )
 
 st.set_page_config(
-    page_title="LU/N2 応対ダッシュボード", page_icon="📊", layout="wide",
+    page_title="hajuCSダッシュボード", page_icon="📊", layout="wide",
+)
+
+# ─────────────────────────────────────────────
+# カスタム CSS（デザイン仕上げ）
+# ─────────────────────────────────────────────
+st.markdown(
+    """
+<style>
+/* 全体フォント */
+html, body, [class*="css"] {
+    font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+                 "Yu Gothic", "Meiryo", sans-serif;
+}
+
+/* h1 のアクセント帯 */
+.stApp h1 {
+    color: #7a4f00;
+    letter-spacing: 0.02em;
+    padding: 12px 20px;
+    background: linear-gradient(90deg, #fff2b3 0%, #fffbe6 100%);
+    border-left: 6px solid #e0a800;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+/* セクション見出し h3 の下線とスペース */
+.stApp h3 {
+    color: #5d3f00;
+    margin-top: 28px !important;
+    margin-bottom: 12px !important;
+    padding: 4px 0 8px 0 !important;
+    border-bottom: 2px solid rgba(224, 168, 0, 0.35) !important;
+}
+
+/* KPI カードを浮き上がらせる */
+div[data-testid="stMetric"] {
+    background-color: rgba(255, 255, 255, 0.7);
+    padding: 14px 18px;
+    border-radius: 12px;
+    border: 1px solid rgba(224, 168, 0, 0.15);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+    transition: box-shadow 0.15s ease-in-out, transform 0.15s;
+}
+div[data-testid="stMetric"]:hover {
+    box-shadow: 0 4px 10px rgba(224, 168, 0, 0.15);
+    transform: translateY(-1px);
+}
+
+/* サイドバーをキャラメル系に */
+section[data-testid="stSidebar"] {
+    background-color: #fff5d1 !important;
+    border-right: 1px solid rgba(224, 168, 0, 0.15);
+}
+section[data-testid="stSidebar"] h3 {
+    color: #5d3f00 !important;
+    border-bottom: 1px solid rgba(224, 168, 0, 0.3) !important;
+}
+
+/* 区切り線 hr を薄いゴールドに */
+hr {
+    border: none !important;
+    border-top: 1px dashed rgba(224, 168, 0, 0.4) !important;
+    margin: 24px 0 !important;
+}
+
+/* Tab のアクティブラベルにアクセント */
+button[data-baseweb="tab"] {
+    font-weight: 500;
+}
+button[data-baseweb="tab"][aria-selected="true"] {
+    color: #b8860b !important;
+}
+div[data-baseweb="tab-highlight"] {
+    background-color: #e0a800 !important;
+}
+
+/* データフレームの罫線を柔らかく */
+div[data-testid="stDataFrame"] {
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid rgba(224, 168, 0, 0.15);
+}
+
+/* Expander のヘッダを少し華やかに */
+details summary {
+    background-color: rgba(255, 245, 209, 0.5) !important;
+    border-radius: 6px !important;
+}
+
+/* Metric caption（全体の◯%） */
+.stCaption, div[data-testid="stCaptionContainer"] {
+    color: #8a6b1a !important;
+}
+</style>
+""",
+    unsafe_allow_html=True,
 )
 
 # ※ パスワード保護は無効化しています（URL を知っている人のみアクセス）。
@@ -187,7 +283,7 @@ if show_prev:
 # ─────────────────────────────────────────────
 # ヘッダ
 # ─────────────────────────────────────────────
-st.title("📊 LU / N2 応対ダッシュボード")
+st.title("📊 hajuCSダッシュボード")
 st.caption(
     f"期間: {date_from} 〜 {date_to} ／ 対象 {len(fdf):,} 件 ／ "
     f"コールセンター: {', '.join(call_centers) if call_centers else '（未選択）'}"
