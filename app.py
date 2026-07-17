@@ -30,11 +30,60 @@ from data_loader import (
     apply_rate_filters,
     load_brand_name,
     load_data,
+    load_theme_name,
     previous_period,
 )
 
 BRAND = load_brand_name()
 DASHBOARD_TITLE = f"{BRAND}ダッシュボード"
+
+# ─────────────────────────────────────────────
+# テーマパレット（Secrets で "gold" or "green" を指定）
+# ─────────────────────────────────────────────
+THEME_PALETTES: dict[str, dict[str, str]] = {
+    "gold": {
+        "h1_text": "#7a4f00",
+        "h1_grad_start": "#fff2b3",
+        "h1_grad_end": "#fffbe6",
+        "h1_border": "#e0a800",
+        "h3_text": "#5d3f00",
+        "h3_border": "rgba(224, 168, 0, 0.35)",
+        "metric_border": "rgba(224, 168, 0, 0.15)",
+        "metric_hover": "rgba(224, 168, 0, 0.15)",
+        "sidebar_bg": "#fff5d1",
+        "sidebar_border": "rgba(224, 168, 0, 0.15)",
+        "sidebar_h3": "#5d3f00",
+        "sidebar_h3_border": "rgba(224, 168, 0, 0.3)",
+        "hr_border": "rgba(224, 168, 0, 0.4)",
+        "tab_active": "#b8860b",
+        "tab_highlight": "#e0a800",
+        "df_border": "rgba(224, 168, 0, 0.15)",
+        "expander_bg": "rgba(255, 245, 209, 0.5)",
+        "caption": "#8a6b1a",
+    },
+    "green": {
+        "h1_text": "#1b5e20",
+        "h1_grad_start": "#c5e1a5",
+        "h1_grad_end": "#f1f8e9",
+        "h1_border": "#7cb342",
+        "h3_text": "#2e7d32",
+        "h3_border": "rgba(124, 179, 66, 0.4)",
+        "metric_border": "rgba(124, 179, 66, 0.2)",
+        "metric_hover": "rgba(124, 179, 66, 0.2)",
+        "sidebar_bg": "#e8f5e9",
+        "sidebar_border": "rgba(124, 179, 66, 0.2)",
+        "sidebar_h3": "#2e7d32",
+        "sidebar_h3_border": "rgba(124, 179, 66, 0.35)",
+        "hr_border": "rgba(124, 179, 66, 0.45)",
+        "tab_active": "#558b2f",
+        "tab_highlight": "#7cb342",
+        "df_border": "rgba(124, 179, 66, 0.2)",
+        "expander_bg": "rgba(220, 237, 200, 0.5)",
+        "caption": "#33691e",
+    },
+}
+_theme_name = load_theme_name()
+T = THEME_PALETTES.get(_theme_name, THEME_PALETTES["gold"])
 
 st.set_page_config(
     page_title=DASHBOARD_TITLE, page_icon="📊", layout="wide",
@@ -44,93 +93,93 @@ st.set_page_config(
 # カスタム CSS（デザイン仕上げ）
 # ─────────────────────────────────────────────
 st.markdown(
-    """
+    f"""
 <style>
 /* 全体フォント */
-html, body, [class*="css"] {
+html, body, [class*="css"] {{
     font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN",
                  "Yu Gothic", "Meiryo", sans-serif;
-}
+}}
 
 /* h1 のアクセント帯 */
-.stApp h1 {
-    color: #7a4f00;
+.stApp h1 {{
+    color: {T["h1_text"]};
     letter-spacing: 0.02em;
     padding: 12px 20px;
-    background: linear-gradient(90deg, #fff2b3 0%, #fffbe6 100%);
-    border-left: 6px solid #e0a800;
+    background: linear-gradient(90deg, {T["h1_grad_start"]} 0%, {T["h1_grad_end"]} 100%);
+    border-left: 6px solid {T["h1_border"]};
     border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-}
+}}
 
-/* セクション見出し h3 の下線とスペース */
-.stApp h3 {
-    color: #5d3f00;
+/* セクション見出し h3 */
+.stApp h3 {{
+    color: {T["h3_text"]};
     margin-top: 28px !important;
     margin-bottom: 12px !important;
     padding: 4px 0 8px 0 !important;
-    border-bottom: 2px solid rgba(224, 168, 0, 0.35) !important;
-}
+    border-bottom: 2px solid {T["h3_border"]} !important;
+}}
 
-/* KPI カードを浮き上がらせる */
-div[data-testid="stMetric"] {
+/* KPI カード */
+div[data-testid="stMetric"] {{
     background-color: rgba(255, 255, 255, 0.7);
     padding: 14px 18px;
     border-radius: 12px;
-    border: 1px solid rgba(224, 168, 0, 0.15);
+    border: 1px solid {T["metric_border"]};
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
     transition: box-shadow 0.15s ease-in-out, transform 0.15s;
-}
-div[data-testid="stMetric"]:hover {
-    box-shadow: 0 4px 10px rgba(224, 168, 0, 0.15);
+}}
+div[data-testid="stMetric"]:hover {{
+    box-shadow: 0 4px 10px {T["metric_hover"]};
     transform: translateY(-1px);
-}
+}}
 
-/* サイドバーをキャラメル系に */
-section[data-testid="stSidebar"] {
-    background-color: #fff5d1 !important;
-    border-right: 1px solid rgba(224, 168, 0, 0.15);
-}
-section[data-testid="stSidebar"] h3 {
-    color: #5d3f00 !important;
-    border-bottom: 1px solid rgba(224, 168, 0, 0.3) !important;
-}
+/* サイドバー */
+section[data-testid="stSidebar"] {{
+    background-color: {T["sidebar_bg"]} !important;
+    border-right: 1px solid {T["sidebar_border"]};
+}}
+section[data-testid="stSidebar"] h3 {{
+    color: {T["sidebar_h3"]} !important;
+    border-bottom: 1px solid {T["sidebar_h3_border"]} !important;
+}}
 
-/* 区切り線 hr を薄いゴールドに */
-hr {
+/* 区切り線 hr */
+hr {{
     border: none !important;
-    border-top: 1px dashed rgba(224, 168, 0, 0.4) !important;
+    border-top: 1px dashed {T["hr_border"]} !important;
     margin: 24px 0 !important;
-}
+}}
 
-/* Tab のアクティブラベルにアクセント */
-button[data-baseweb="tab"] {
+/* Tab のアクティブラベル */
+button[data-baseweb="tab"] {{
     font-weight: 500;
-}
-button[data-baseweb="tab"][aria-selected="true"] {
-    color: #b8860b !important;
-}
-div[data-baseweb="tab-highlight"] {
-    background-color: #e0a800 !important;
-}
+}}
+button[data-baseweb="tab"][aria-selected="true"] {{
+    color: {T["tab_active"]} !important;
+}}
+div[data-baseweb="tab-highlight"] {{
+    background-color: {T["tab_highlight"]} !important;
+}}
 
-/* データフレームの罫線を柔らかく */
-div[data-testid="stDataFrame"] {
+/* データフレームの罫線 */
+div[data-testid="stDataFrame"] {{
     border-radius: 8px;
     overflow: hidden;
-    border: 1px solid rgba(224, 168, 0, 0.15);
-}
+    border: 1px solid {T["df_border"]};
+}}
 
-/* Expander のヘッダを少し華やかに */
-details summary {
-    background-color: rgba(255, 245, 209, 0.5) !important;
+/* Expander */
+details summary {{
+    background-color: {T["expander_bg"]} !important;
     border-radius: 6px !important;
-}
+}}
 
-/* Metric caption（全体の◯%） */
-.stCaption, div[data-testid="stCaptionContainer"] {
-    color: #8a6b1a !important;
-}
+/* Caption */
+.stCaption, div[data-testid="stCaptionContainer"] {{
+    color: {T["caption"]} !important;
+}}
 </style>
 """,
     unsafe_allow_html=True,
