@@ -44,34 +44,56 @@ _DEFAULT_SHEETS: dict[str, str] = {
 DEFAULT_BRAND_NAME = "hajuCS"
 
 
-def _load_sheets_from_secrets() -> dict[str, str]:
+def _load_sheets_from_secrets() -> "dict[str, str]":
     """`st.secrets["sheets"]` からシート URL を読む。無ければデフォルトを返す。
 
     Secrets の書式例:
         [sheets]
         LU = "https://docs.google.com/spreadsheets/d/e/xxxxx"
         N2 = "https://docs.google.com/spreadsheets/d/e/yyyyy"
+
+    Streamlit のバージョンにより `st.secrets` の挙動が異なるため、
+    どの例外が飛んでも安全にデフォルトへフォールバックする。
     """
+    default = dict(_DEFAULT_SHEETS)
     try:
-        cfg = st.secrets.get("sheets", None)
-        if cfg:
-            return {str(k): str(v) for k, v in dict(cfg).items() if v}
-    except Exception:
-        pass
-    return dict(_DEFAULT_SHEETS)
+        secrets_obj = getattr(st, "secrets", None)
+        if secrets_obj is None:
+            return default
+        try:
+            cfg = secrets_obj["sheets"]
+        except Exception:
+            return default
+        if not cfg:
+            return default
+        result: dict[str, str] = {}
+        try:
+            for k, v in cfg.items():
+                if v:
+                    result[str(k)] = str(v)
+        except Exception:
+            return default
+        return result if result else default
+    except BaseException:
+        return default
 
 
 def load_brand_name() -> str:
     """`st.secrets["brand"]["name"]` からブランド名を読む。無ければデフォルト。"""
     try:
-        name = st.secrets["brand"]["name"]
-        if name:
-            return str(name)
-    except Exception:
-        pass
-    return DEFAULT_BRAND_NAME
+        secrets_obj = getattr(st, "secrets", None)
+        if secrets_obj is None:
+            return DEFAULT_BRAND_NAME
+        try:
+            name = secrets_obj["brand"]["name"]
+        except Exception:
+            return DEFAULT_BRAND_NAME
+        return str(name) if name else DEFAULT_BRAND_NAME
+    except BaseException:
+        return DEFAULT_BRAND_NAME
 
 
+# モジュール読み込み時に呼ぶが、内部で全例外を捕まえるので落ちない
 SHEETS: dict[str, str] = _load_sheets_from_secrets()
 
 OPS_TAB_NAME = "応対記録"
