@@ -13,3 +13,6 @@ venv/
 .vscode/
 .idea/
 .DS_Store
+
+# 作業ファイル
+tmp/
