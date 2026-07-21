@@ -561,7 +561,7 @@ else:
             use_container_width=True,
         )
     with _o_cols[1]:
-        st.markdown("**カテゴリ別の代表テキスト（上位5件を"/"で連結）**")
+        st.markdown('**カテゴリ別の代表テキスト（上位5件を "/" で連結）**')
         st.dataframe(
             _other.rename(columns={
                 "category": "分類",
