@@ -15,9 +15,11 @@ from data_loader import (
     BANSHAKU_COURSE_CHANGE_SET,
     BANSHAKU_ORDER,
     BANSHAKU_RETENTION_SET,
+    PREDEFINED_CANCEL_REASONS,
     REQUEST_MAIN_CATEGORIES,
     REQUEST_OTHER_LABEL,
     SUBSCRIPTION_ORDER,
+    classify_free_cancel_reason,
     explode_multi,
 )
 
@@ -209,6 +211,59 @@ def cancel_reason_top(df: pd.DataFrame, top_n: int = 15) -> pd.DataFrame:
         return pd.DataFrame(columns=["cancel_reason", "count"])
     grp = ex.groupby("cancel_reason").size().reset_index(name="count")
     return grp.sort_values("count", ascending=False).head(top_n).reset_index(drop=True)
+
+
+def other_cancel_reason_breakdown(df: pd.DataFrame) -> pd.DataFrame:
+    """事前定義19カテゴリに含まれない解約理由（自由記述）をキーワード分類して集計。
+
+    戻り値: columns = ['category', 'count', 'sample_texts']
+      - category: キーワード分類ラベル（家族関係 / 認識違い・誤注文 / 期待違い ほか）
+      - count:    そのカテゴリに落ちた自由記述の件数
+      - sample_texts: 該当した自由記述のうち上位5件を "/" 連結で参考表示
+    """
+    empty = pd.DataFrame(columns=["category", "count", "sample_texts"])
+    if df.empty:
+        return empty
+    canc = df[df["is_cancel"]]
+    ex = explode_multi(canc, "cancel_reason")
+    if ex.empty:
+        return empty
+    free = ex[~ex["cancel_reason"].isin(PREDEFINED_CANCEL_REASONS)].copy()
+    if free.empty:
+        return empty
+    free["category"] = free["cancel_reason"].map(classify_free_cancel_reason)
+    free = free[free["category"] != ""]
+    if free.empty:
+        return empty
+    grp = free.groupby("category").agg(
+        count=("cancel_reason", "size"),
+        sample_texts=(
+            "cancel_reason",
+            lambda s: " / ".join(list(dict.fromkeys(s))[:5]),
+        ),
+    ).reset_index()
+    return grp.sort_values("count", ascending=False).reset_index(drop=True)
+
+
+def other_cancel_reason_raw(df: pd.DataFrame) -> pd.DataFrame:
+    """事前定義外の自由記述解約理由の生一覧（監査用・全文表示）。
+
+    戻り値: columns = ['text', 'count', 'classified']
+    """
+    empty = pd.DataFrame(columns=["text", "count", "classified"])
+    if df.empty:
+        return empty
+    canc = df[df["is_cancel"]]
+    ex = explode_multi(canc, "cancel_reason")
+    if ex.empty:
+        return empty
+    free = ex[~ex["cancel_reason"].isin(PREDEFINED_CANCEL_REASONS)].copy()
+    if free.empty:
+        return empty
+    counts = free["cancel_reason"].value_counts().reset_index()
+    counts.columns = ["text", "count"]
+    counts["classified"] = counts["text"].map(classify_free_cancel_reason)
+    return counts
 
 
 def center_breakdown(df: pd.DataFrame, group_col: str) -> pd.DataFrame:

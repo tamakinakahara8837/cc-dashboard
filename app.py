@@ -537,6 +537,55 @@ with c2:
 st.markdown("---")
 
 # ─────────────────────────────────────────────
+# 🗂 その他解約理由 集計（Google Form の19事前定義カテゴリに含まれない自由記述をキーワード分類）
+# ─────────────────────────────────────────────
+st.markdown("### 🗂 その他解約理由 集計")
+st.caption(
+    "Google Form の事前定義19カテゴリに該当しない**自由記述**の解約理由を、"
+    "キーワードで分類して集計します。"
+    "例: 「勘違いして注文した」→ **認識違い・誤注文** / "
+    "「ご主人が飲まない」→ **家族関係** など。"
+)
+
+_other = metrics.other_cancel_reason_breakdown(fdf)
+if _other.empty:
+    st.info("この条件では自由記述の解約理由がありません。")
+else:
+    _o_cols = st.columns([2, 3])
+    with _o_cols[0]:
+        st.plotly_chart(
+            charts.horizontal_bar(
+                _other[["category", "count"]], "count", "category",
+                "その他解約理由 カテゴリ別",
+            ),
+            use_container_width=True,
+        )
+    with _o_cols[1]:
+        st.markdown("**カテゴリ別の代表テキスト（上位5件を"/"で連結）**")
+        st.dataframe(
+            _other.rename(columns={
+                "category": "分類",
+                "count": "件数",
+                "sample_texts": "サンプル記述",
+            }),
+            use_container_width=True, hide_index=True, height=360,
+        )
+
+    with st.expander("📋 自由記述の全件リスト（分類確認用）"):
+        _raw = metrics.other_cancel_reason_raw(fdf)
+        st.caption(f"該当 {len(_raw)} 種類の自由記述。**分類が「その他(分類不能)」のものは、キーワード辞書に追加検討 🔍**")
+        st.dataframe(
+            _raw.rename(columns={
+                "text": "本文",
+                "count": "件数",
+                "classified": "分類結果",
+            }),
+            use_container_width=True, hide_index=True, height=420,
+        )
+
+st.markdown("---")
+
+# ─────────────────────────────────────────────
 # 🎯 継続応援 成功率の内訳
 # ─────────────────────────────────────────────
 st.markdown("### 🎯 継続応援 成功率の内訳")
