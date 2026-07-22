@@ -28,6 +28,7 @@ from data_loader import (
     TEAMS,
     apply_ops_filters,
     apply_rate_filters,
+    explode_multi,
     load_brand_name,
     load_data,
     load_theme_name,
@@ -720,10 +721,60 @@ st.markdown("---")
 # 💬 自由記述
 # ─────────────────────────────────────────────
 st.markdown("### 💬 自由記述の詳細")
+
+
+def _filter_free_text(
+    df: pd.DataFrame,
+    products: list[str],
+    courses: list[str],
+    subs: list[str],
+    kinds: list[str],
+    kind_col: str,
+) -> pd.DataFrame:
+    """自由記述テーブルに 4 種類のフィルタを重ねる（複数選択セルは contains 判定）。"""
+    if df.empty:
+        return df
+    out = df.copy()
+    if products:
+        import re as _re
+        pat = "|".join(_re.escape(p) for p in products)
+        out = out[out["product"].fillna("").str.contains(pat, regex=True)]
+    if courses:
+        out = out[out["course"].isin(courses)]
+    if subs:
+        out = out[out["subscription_count"].isin(subs)]
+    if kinds and kind_col in out.columns:
+        import re as _re
+        pat = "|".join(_re.escape(k) for k in kinds)
+        out = out[out[kind_col].fillna("").str.contains(pat, regex=True)]
+    return out
+
+
 tab_neg, tab_pos = st.tabs(["🔥 ネガティブ", "🌸 ポジティブ（嬉しい声）"])
+
 with tab_neg:
-    kw = st.text_input("キーワード検索（ネガ）", key="kw_neg", placeholder="例: 消費者センター")
+    # 4 フィルタ列
+    _neg_prod_opt = sorted(explode_multi(fdf, "product")["product"].unique().tolist())
+    _neg_course_opt = sorted([c for c in fdf["course"].unique() if c])
+    _neg_sub_opt = [s for s in SUBSCRIPTION_ORDER if s in fdf["subscription_count"].unique()]
+    _neg_esc_opt = sorted(explode_multi(fdf, "escalation_cause")["escalation_cause"].unique().tolist())
+
+    _nc = st.columns(4)
+    with _nc[0]:
+        f_neg_products = st.multiselect("商品", _neg_prod_opt, key="ft_neg_prod")
+    with _nc[1]:
+        f_neg_courses = st.multiselect("コース", _neg_course_opt, key="ft_neg_course")
+    with _nc[2]:
+        f_neg_subs = st.multiselect("定期回数", _neg_sub_opt, key="ft_neg_sub")
+    with _nc[3]:
+        f_neg_kinds = st.multiselect("温度感原因", _neg_esc_opt, key="ft_neg_kind")
+
+    kw = st.text_input("キーワード検索（本文）", key="kw_neg", placeholder="例: 消費者センター")
     neg = metrics.free_text_records(fdf, "negative", keyword=kw)
+    neg = _filter_free_text(
+        neg, f_neg_products, f_neg_courses, f_neg_subs, f_neg_kinds,
+        kind_col="escalation_cause",
+    )
     st.caption(f"該当 {len(neg):,} 件")
     st.dataframe(
         neg.rename(
@@ -735,11 +786,31 @@ with tab_neg:
         ),
         use_container_width=True, hide_index=True, height=420,
     )
+
 with tab_pos:
-    kw = st.text_input("キーワード検索（ポジ）", key="kw_pos", placeholder="例: 効果")
+    _pos_prod_opt = sorted(explode_multi(fdf, "product")["product"].unique().tolist())
+    _pos_course_opt = sorted([c for c in fdf["course"].unique() if c])
+    _pos_sub_opt = [s for s in SUBSCRIPTION_ORDER if s in fdf["subscription_count"].unique()]
+    _pos_kind_opt = sorted(explode_multi(fdf, "positive_kind")["positive_kind"].unique().tolist())
+
+    _pc = st.columns(4)
+    with _pc[0]:
+        f_pos_products = st.multiselect("商品", _pos_prod_opt, key="ft_pos_prod")
+    with _pc[1]:
+        f_pos_courses = st.multiselect("コース", _pos_course_opt, key="ft_pos_course")
+    with _pc[2]:
+        f_pos_subs = st.multiselect("定期回数", _pos_sub_opt, key="ft_pos_sub")
+    with _pc[3]:
+        f_pos_kinds = st.multiselect("内容種別", _pos_kind_opt, key="ft_pos_kind")
+
+    kw = st.text_input("キーワード検索（本文）", key="kw_pos", placeholder="例: 効果")
     pos = metrics.free_text_records(fdf, "positive", keyword=kw)
-    st.caption(f"該当 {len(pos):,} 件（すべての嬉しい声を全文表示）")
-    # 種別ごとの件数サマリ
+    pos = _filter_free_text(
+        pos, f_pos_products, f_pos_courses, f_pos_subs, f_pos_kinds,
+        kind_col="positive_kind",
+    )
+    st.caption(f"該当 {len(pos):,} 件")
+    # 種別ごとの件数サマリ（絞込後）
     if not pos.empty:
         by_kind = pos["positive_kind"].value_counts()
         summary = "  ／  ".join([f"**{k}**: {v}" for k, v in by_kind.items() if k])
