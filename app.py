@@ -21,6 +21,7 @@ import streamlit as st
 import charts
 import metrics
 from data_loader import (
+    AGE_GROUP_ORDER,
     REQUEST_MAIN_CATEGORIES,
     REQUEST_OTHER_LABEL,
     SHEETS,
@@ -725,155 +726,185 @@ if metrics.has_child_age_data(fdf):
 
     st.markdown("### 👶 お子様の年齢分析")
     st.caption(
-        "キッズ商品ご使用のお客様から聞き取った年齢を "
-        "0-3歳 / 4-6歳 / 7-9歳 / 10-12歳 / 13歳以上 / 不明 の6バケットに集約。"
-        "解約以外にも問い合わせ内容・商品・コース・VOC など多角的に分析できます。"
+        "お子様の年齢（数値入力）を分析します。**表示単位**で「個別年齢（0歳・1歳…）」と "
+        "「学校区分（0-2歳 / 幼稚園 / 小学校低学年・高学年 / 中学生 / 高校生以上）」を切替でき、"
+        "**学校区分フィルタ**で特定の年齢層に絞った深掘りも可能です。"
     )
 
-    def _grouped_bar(cross_df, group_col, title, height=380, x_angle=-30):
-        """年齢を色分けにしたグループ棒グラフのヘルパー。"""
-        if cross_df.empty:
-            st.caption(f"{title}: 該当データがまだありません。")
-            return
-        _fig = _px.bar(
-            cross_df.astype({"age_bucket": str, group_col: str}),
-            x=group_col, y="count", color="age_bucket",
-            barmode="group",
-            title=title,
-            labels={group_col: group_col, "count": "件数", "age_bucket": "年齢"},
-            category_orders={"age_bucket": [b for b in ["0-3歳","4-6歳","7-9歳","10-12歳","13歳以上","不明"]]},
+    # ─────────────── 切替 UI ───────────────
+    _ui_cols = st.columns([2, 3])
+    with _ui_cols[0]:
+        _age_view = st.radio(
+            "表示単位",
+            options=["個別年齢", "学校区分"],
+            horizontal=True,
+            index=0,
+            key="age_view_mode",
         )
-        _fig.update_layout(height=height, xaxis_tickangle=x_angle,
-                           legend=dict(orientation="h", y=-0.25))
-        st.plotly_chart(_fig, use_container_width=True)
+    with _ui_cols[1]:
+        _group_filter = st.multiselect(
+            "学校区分で絞り込み（空 = 全区分）",
+            options=[g for g in AGE_GROUP_ORDER if g != "不明"] + ["不明"],
+            default=[],
+            key="age_group_filter",
+        )
 
-    def _cross_table(cross_df, group_col):
-        """年齢 × カラムのピボット表を表示。"""
-        if cross_df.empty:
-            return
-        pivot = cross_df.pivot(
-            index="age_bucket", columns=group_col, values="count"
-        ).fillna(0).astype(int)
-        st.dataframe(pivot, use_container_width=True)
+    _age_col = "child_age_label" if _age_view == "個別年齢" else "child_age_bucket"
+    # 学校区分フィルタを事前適用（両モード共通）
+    _fdf_age = metrics.apply_age_group_filter(fdf, _group_filter or None)
 
-    tab_age = st.tabs([
-        "📊 概要",
-        "🚪 解約",
-        "🔁 定期回数",
-        "📞 問い合わせ内容",
-        "🛍 商品",
-        "☕ コース",
-        "🌈 すまいる応援",
-        "⚠️ VOC・センター系",
-    ])
-
-    # === 概要 ===
-    with tab_age[0]:
-        # 上段: 年齢分布 + 継続応援成功率
-        c1, c2 = st.columns([1, 1])
-        with c1:
-            st.plotly_chart(
-                charts.vertical_bar(
-                    metrics.child_age_distribution(fdf).rename(columns={"age_bucket": "年齢"}),
-                    "年齢", "count", "年齢バケット別 応対件数",
-                ),
-                use_container_width=True,
+    if not metrics.has_child_age_data(_fdf_age):
+        st.info("このフィルタでは年齢データがありません。")
+    else:
+        def _grouped_bar(cross_df, group_col, title, height=380, x_angle=-30):
+            if cross_df.empty:
+                st.caption(f"{title}: 該当データがまだありません。")
+                return
+            _fig = _px.bar(
+                cross_df.astype({"age": str, group_col: str}),
+                x=group_col, y="count", color="age",
+                barmode="group",
+                title=title,
+                labels={group_col: group_col, "count": "件数", "age": "年齢"},
             )
-        with c2:
-            _age_reten = metrics.child_age_retention(fdf)
-            if not _age_reten.empty:
+            _fig.update_layout(
+                height=height, xaxis_tickangle=x_angle,
+                legend=dict(orientation="h", y=-0.25),
+            )
+            st.plotly_chart(_fig, use_container_width=True)
+
+        def _cross_table(cross_df, group_col):
+            if cross_df.empty:
+                return
+            pivot = cross_df.pivot(
+                index="age", columns=group_col, values="count"
+            ).fillna(0).astype(int)
+            st.dataframe(pivot, use_container_width=True)
+
+        tab_age = st.tabs([
+            "📊 概要",
+            "🚪 解約",
+            "🔁 定期回数",
+            "📞 問い合わせ内容",
+            "🛍 商品",
+            "☕ コース",
+            "🌈 すまいる応援",
+            "⚠️ VOC・センター系",
+        ])
+
+        # === 概要 ===
+        with tab_age[0]:
+            c1, c2 = st.columns([1, 1])
+            with c1:
                 st.plotly_chart(
-                    charts.retention_rate_bar(
-                        _age_reten.rename(columns={"age_bucket": "年齢"}),
-                        "年齢", "年齢別 継続応援 成功率",
+                    charts.vertical_bar(
+                        metrics.child_age_distribution(_fdf_age, age_col=_age_col)
+                            .rename(columns={"age": "年齢"}),
+                        "年齢", "count",
+                        f"{_age_view} 別 応対件数",
                     ),
                     use_container_width=True,
                 )
-            else:
-                st.info("継続応援の有効データがまだありません。")
+            with c2:
+                _age_reten = metrics.child_age_retention(_fdf_age, age_col=_age_col)
+                if not _age_reten.empty:
+                    st.plotly_chart(
+                        charts.retention_rate_bar(
+                            _age_reten.rename(columns={"age": "年齢"}),
+                            "年齢",
+                            f"{_age_view} 別 継続応援 成功率",
+                        ),
+                        use_container_width=True,
+                    )
+                else:
+                    st.info("継続応援の有効データがまだありません。")
 
-        # 下段: 年齢別 総合KPI 表
-        st.markdown("#### 年齢別 総合サマリ")
-        _summary = metrics.child_age_summary(fdf)
-        if not _summary.empty:
-            _show = _summary.copy()
-            _show["解約率"] = _show["解約率"].apply(
-                lambda v: f"{v * 100:.1f}%" if pd.notna(v) else "—"
+            st.markdown(f"#### {_age_view} 別 総合サマリ")
+            _summary = metrics.child_age_summary(_fdf_age, age_col=_age_col)
+            if not _summary.empty:
+                _show = _summary.copy()
+                _show["解約率"] = _show["解約率"].apply(
+                    lambda v: f"{v * 100:.1f}%" if pd.notna(v) else "—"
+                )
+                _show["継続応援成功率"] = _show["継続応援成功率"].apply(
+                    lambda v: f"{v * 100:.1f}%" if pd.notna(v) else "—"
+                )
+                for c in ("応対件数", "解約件数", "新規初回解約",
+                          "センターワード", "温度感上昇", "嬉しい声"):
+                    _show[c] = _show[c].apply(lambda v: f"{int(v):,}")
+                st.dataframe(_show, use_container_width=True, hide_index=True)
+
+        # === 解約 ===
+        with tab_age[1]:
+            _cross = metrics.child_age_cross(
+                _fdf_age, "cancel_reason",
+                age_col=_age_col, exploded=True, top_n=15, filter_cancel=True,
             )
-            _show["継続応援成功率"] = _show["継続応援成功率"].apply(
-                lambda v: f"{v * 100:.1f}%" if pd.notna(v) else "—"
+            _grouped_bar(_cross, "cancel_reason", f"{_age_view} × 解約理由 TOP15", height=440)
+            with st.expander("📋 表で見る"):
+                _cross_table(_cross, "cancel_reason")
+
+        # === 定期回数 ===
+        with tab_age[2]:
+            _cross = metrics.child_age_cross(_fdf_age, "subscription_count", age_col=_age_col)
+            if not _cross.empty:
+                _cross["subscription_count"] = pd.Categorical(
+                    _cross["subscription_count"],
+                    categories=SUBSCRIPTION_ORDER, ordered=True,
+                )
+                _cross = _cross.sort_values(["subscription_count", "age"])
+            _grouped_bar(_cross, "subscription_count", f"{_age_view} × 定期回数", x_angle=0)
+            with st.expander("📋 表で見る"):
+                _cross_table(_cross, "subscription_count")
+
+        # === 問い合わせ内容 ===
+        with tab_age[3]:
+            _cross = metrics.child_age_cross(_fdf_age, "request_category", age_col=_age_col)
+            _grouped_bar(_cross, "request_category", f"{_age_view} × 問い合わせ内容")
+            with st.expander("📋 表で見る"):
+                _cross_table(_cross, "request_category")
+
+        # === 商品 ===
+        with tab_age[4]:
+            _cross = metrics.child_age_cross(
+                _fdf_age, "product", age_col=_age_col, exploded=True, top_n=10,
             )
-            for c in ("応対件数", "解約件数", "新規初回解約", "センターワード", "温度感上昇", "嬉しい声"):
-                _show[c] = _show[c].apply(lambda v: f"{int(v):,}")
-            st.dataframe(_show, use_container_width=True, hide_index=True)
+            _grouped_bar(_cross, "product", f"{_age_view} × 商品 TOP10", height=420)
+            with st.expander("📋 表で見る"):
+                _cross_table(_cross, "product")
 
-    # === 解約 ===
-    with tab_age[1]:
-        _cross = metrics.child_age_cross(
-            fdf, "cancel_reason", exploded=True, top_n=15, filter_cancel=True,
-        )
-        _grouped_bar(_cross, "cancel_reason", "年齢 × 解約理由 TOP15", height=440)
-        with st.expander("📋 表で見る（年齢 × 解約理由）"):
-            _cross_table(_cross, "cancel_reason")
+        # === コース ===
+        with tab_age[5]:
+            _cross = metrics.child_age_cross(_fdf_age, "course", age_col=_age_col)
+            _grouped_bar(_cross, "course", f"{_age_view} × コース", x_angle=0)
+            with st.expander("📋 表で見る"):
+                _cross_table(_cross, "course")
 
-    # === 定期回数 ===
-    with tab_age[2]:
-        _cross = metrics.child_age_cross(fdf, "subscription_count")
-        # SUBSCRIPTION_ORDER 順に並べたいので、事前定義順で category 化
-        if not _cross.empty:
-            _cross["subscription_count"] = pd.Categorical(
-                _cross["subscription_count"],
-                categories=SUBSCRIPTION_ORDER,
-                ordered=True,
+        # === すまいる応援 対応内容 ===
+        with tab_age[6]:
+            _cross = metrics.child_age_cross(_fdf_age, "banshaku_category", age_col=_age_col)
+            _grouped_bar(_cross, "banshaku_category",
+                         f"{_age_view} × すまいる応援対応内容", height=400)
+            with st.expander("📋 表で見る"):
+                _cross_table(_cross, "banshaku_category")
+
+        # === VOC・センター系 ===
+        with tab_age[7]:
+            _cross_voc = metrics.child_age_cross(_fdf_age, "voc", age_col=_age_col)
+            _grouped_bar(_cross_voc, "voc", f"{_age_view} × VOC", height=380)
+
+            _cross_esc = metrics.child_age_cross(
+                _fdf_age, "escalation_cause",
+                age_col=_age_col, exploded=True, top_n=10,
             )
-            _cross = _cross.sort_values(["subscription_count", "age_bucket"])
-        _grouped_bar(_cross, "subscription_count", "年齢 × 定期回数", x_angle=0)
-        with st.expander("📋 表で見る（年齢 × 定期回数）"):
-            _cross_table(_cross, "subscription_count")
+            _grouped_bar(_cross_esc, "escalation_cause",
+                         f"{_age_view} × 温度感上昇 原因 TOP10", height=380)
 
-    # === 問い合わせ内容 ===
-    with tab_age[3]:
-        _cross = metrics.child_age_cross(fdf, "request_category")
-        _grouped_bar(_cross, "request_category", "年齢 × 問い合わせ内容")
-        with st.expander("📋 表で見る（年齢 × 問い合わせ内容）"):
-            _cross_table(_cross, "request_category")
-
-    # === 商品 ===
-    with tab_age[4]:
-        _cross = metrics.child_age_cross(fdf, "product", exploded=True, top_n=10)
-        _grouped_bar(_cross, "product", "年齢 × 商品 TOP10", height=420)
-        with st.expander("📋 表で見る（年齢 × 商品）"):
-            _cross_table(_cross, "product")
-
-    # === コース ===
-    with tab_age[5]:
-        _cross = metrics.child_age_cross(fdf, "course")
-        _grouped_bar(_cross, "course", "年齢 × コース", x_angle=0)
-        with st.expander("📋 表で見る（年齢 × コース）"):
-            _cross_table(_cross, "course")
-
-    # === すまいる応援 対応内容 ===
-    with tab_age[6]:
-        _cross = metrics.child_age_cross(fdf, "banshaku_category")
-        _grouped_bar(_cross, "banshaku_category", "年齢 × すまいる応援対応内容", height=400)
-        with st.expander("📋 表で見る（年齢 × すまいる応援）"):
-            _cross_table(_cross, "banshaku_category")
-
-    # === VOC・センター系 ===
-    with tab_age[7]:
-        # VOC 列で集計（消費者センターワード / 職員 / 嬉しい声 / 温度感 / なし ほか）
-        _cross_voc = metrics.child_age_cross(fdf, "voc")
-        _grouped_bar(_cross_voc, "voc", "年齢 × VOC（応対の質感）", height=380)
-
-        # 温度感上昇の原因（複数選択・エスカレ深掘り）
-        _cross_esc = metrics.child_age_cross(fdf, "escalation_cause", exploded=True, top_n=10)
-        _grouped_bar(_cross_esc, "escalation_cause", "年齢 × 温度感上昇 原因 TOP10", height=380)
-
-        with st.expander("📋 表で見る（年齢 × VOC / 温度感）"):
-            st.caption("VOC 内訳")
-            _cross_table(_cross_voc, "voc")
-            st.caption("温度感上昇 原因")
-            _cross_table(_cross_esc, "escalation_cause")
+            with st.expander("📋 表で見る"):
+                st.caption("VOC 内訳")
+                _cross_table(_cross_voc, "voc")
+                st.caption("温度感上昇 原因")
+                _cross_table(_cross_esc, "escalation_cause")
 
     st.markdown("---")
 

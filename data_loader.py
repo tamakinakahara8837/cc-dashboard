@@ -145,47 +145,110 @@ SUBSCRIPTION_ORDER = ["初回", "2回目", "3回目", "4回目", "5回以上"]
 
 TEAMS = ["専任", "クロコスマルチ", "全体"]
 
-# Co-HeartCS 用: お子様年齢のバケット
-AGE_BUCKET_ORDER: list[str] = [
-    "0-3歳", "4-6歳", "7-9歳", "10-12歳", "13歳以上", "不明",
+# Co-HeartCS 用: お子様年齢の学校区分バケット（数値 → 学校ステージ）
+AGE_GROUP_ORDER: list[str] = [
+    "0-2歳",
+    "幼稚園(3-5歳)",
+    "小学校低学年(6-8歳)",
+    "小学校高学年(9-12歳)",
+    "中学生(13-15歳)",
+    "高校生以上(16歳〜)",
+    "不明",
 ]
+# 後方互換のためのエイリアス
+AGE_BUCKET_ORDER = AGE_GROUP_ORDER
 
 
-def bucket_child_age(value: str) -> str:
-    """お子様の年齢の自由記述を年齢バケットに変換する。
+def parse_child_age(value: str) -> Optional[int]:
+    """お子様の年齢の自由記述から数値（歳）を抽出する。
 
-    数値が含まれる → 数字ベースでバケット
-    文言パターン → 幼稚園 / 小学生 / 中高生 等
-    それ以外の非空値 → "不明"
-    空 → ""
+    優先順:
+      1. 「小X」「中X」「高X」の学年パターン → 6+X-1, 12+X, 15+X
+      2. 「幼稚園」等のフェーズ文言 → 代表値
+      3. 単純な数字 (0〜30)
+    抽出できなければ None。
     """
     if not isinstance(value, str) or not value.strip():
-        return ""
+        return None
     t = value.strip()
+    # 学年パターン（優先）
+    m = re.search(r"小\s*(\d)", t)
+    if m:
+        g = int(m.group(1))
+        if 1 <= g <= 6:
+            return 5 + g  # 小1=6歳, 小6=11歳
+    m = re.search(r"中\s*(\d)", t)
+    if m:
+        g = int(m.group(1))
+        if 1 <= g <= 3:
+            return 12 + g  # 中1=13歳, 中3=15歳
+    m = re.search(r"高\s*(\d)", t)
+    if m:
+        g = int(m.group(1))
+        if 1 <= g <= 3:
+            return 15 + g  # 高1=16歳, 高3=18歳
+    # フェーズ文言
+    if any(w in t for w in ("赤ちゃん", "乳児", "乳幼児")):
+        return 1
+    if any(w in t for w in ("幼稚園", "保育園", "年少")):
+        return 4
+    if "年中" in t:
+        return 5
+    if "年長" in t:
+        return 6
+    if "小学校低学年" in t or "小学生低学年" in t:
+        return 7
+    if "小学校高学年" in t or "小学生高学年" in t:
+        return 10
+    if "小学生" in t or "小学校" in t:
+        return 9  # 代表値
+    if "中学生" in t or "中学校" in t:
+        return 14
+    if "高校生" in t or "高校" in t:
+        return 17
+    # 純粋な数字
     m = re.search(r"(\d{1,2})", t)
     if m:
         n = int(m.group(1))
-        if n <= 3:
-            return "0-3歳"
-        if n <= 6:
-            return "4-6歳"
-        if n <= 9:
-            return "7-9歳"
-        if n <= 12:
-            return "10-12歳"
-        return "13歳以上"
-    # 文言パターン
-    if any(w in t for w in ("赤ちゃん", "乳児", "乳幼児")):
-        return "0-3歳"
-    if any(w in t for w in ("幼稚園", "保育園", "年少", "年中", "年長")):
-        return "4-6歳"
-    if any(w in t for w in ("小学校低学年", "小学生低学年", "小1", "小2", "小3", "低学年")):
-        return "7-9歳"
-    if any(w in t for w in ("小学校高学年", "小学生高学年", "小4", "小5", "小6", "高学年")):
-        return "10-12歳"
-    if any(w in t for w in ("中学生", "中学校", "中1", "中2", "中3", "高校生", "高校")):
-        return "13歳以上"
-    return "不明"
+        if 0 <= n <= 30:
+            return n
+    return None
+
+
+def age_num_to_group(n: Optional[int]) -> str:
+    """数値の年齢を学校区分ラベルに変換する。None → "不明"。"""
+    if n is None:
+        return "不明"
+    if n <= 2:
+        return "0-2歳"
+    if n <= 5:
+        return "幼稚園(3-5歳)"
+    if n <= 8:
+        return "小学校低学年(6-8歳)"
+    if n <= 12:
+        return "小学校高学年(9-12歳)"
+    if n <= 15:
+        return "中学生(13-15歳)"
+    return "高校生以上(16歳〜)"
+
+
+def bucket_child_age(value: str) -> str:
+    """お子様年齢の自由記述を学校区分（AGE_GROUP_ORDER）に変換する。
+
+    空 → ""
+    非空だが数値抽出できない → "不明"
+    数値抽出できたら → 学校区分
+    """
+    if not isinstance(value, str) or not value.strip():
+        return ""
+    return age_num_to_group(parse_child_age(value))
+
+
+def age_display_label(n: Optional[int]) -> str:
+    """個別年齢の表示ラベル。数値なら "X歳"、None なら "不明"。"""
+    if n is None:
+        return "不明"
+    return f"{n}歳"
 
 # 問い合わせ内容の主要カテゴリ（月次シート 4 行目の見出しに合わせる）。
 # これに含まれない値はすべて「その他」に丸める。
@@ -499,12 +562,21 @@ def _load_ops_one(pub_base: str, gid: str, call_center: str) -> pd.DataFrame:
 
     df["request_category"] = df["request"].map(_categorize_request)
     df["banshaku_category"] = df["banshaku_action"].map(_categorize_banshaku)
-    # Co-HeartCS 用: 列が存在すれば年齢バケット列を追加
+    # Co-HeartCS 用: 列が存在すれば年齢派生列を追加
     if "child_age" in df.columns:
+        df["child_age_num"] = df["child_age"].map(parse_child_age)
         df["child_age_bucket"] = df["child_age"].map(bucket_child_age)
+        # 個別年齢の表示ラベル。child_age が空なら "" のまま
+        def _to_label(row):
+            if not isinstance(row["child_age"], str) or not row["child_age"].strip():
+                return ""
+            return age_display_label(row["child_age_num"])
+        df["child_age_label"] = df.apply(_to_label, axis=1)
     else:
         df["child_age"] = ""
+        df["child_age_num"] = None
         df["child_age_bucket"] = ""
+        df["child_age_label"] = ""
 
     df["is_cancel"] = df["request"].fillna("").str.contains("解約", na=False)
     df["is_first_time_cancel"] = df["is_cancel"] & (df["subscription_count"] == "初回")
