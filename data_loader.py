@@ -137,11 +137,55 @@ COLUMN_RENAME = {
     "嬉しい内容をご選択ください(複数選択可)": "positive_kind",
     "内容を簡単にご記載ください(ポジ)": "note_positive",
     "自薦する場合はリレーションのURLを貼ってください(しない場合は空欄で送信)": "relation_url",
+    # Co-HeartCS 用: キッズ商品利用時のお子様年齢
+    "お子様の年齢( ※キッズご使用でお子様の年齢を聞けた場合にご入力ください)": "child_age",
 }
 
 SUBSCRIPTION_ORDER = ["初回", "2回目", "3回目", "4回目", "5回以上"]
 
 TEAMS = ["専任", "クロコスマルチ", "全体"]
+
+# Co-HeartCS 用: お子様年齢のバケット
+AGE_BUCKET_ORDER: list[str] = [
+    "0-3歳", "4-6歳", "7-9歳", "10-12歳", "13歳以上", "不明",
+]
+
+
+def bucket_child_age(value: str) -> str:
+    """お子様の年齢の自由記述を年齢バケットに変換する。
+
+    数値が含まれる → 数字ベースでバケット
+    文言パターン → 幼稚園 / 小学生 / 中高生 等
+    それ以外の非空値 → "不明"
+    空 → ""
+    """
+    if not isinstance(value, str) or not value.strip():
+        return ""
+    t = value.strip()
+    m = re.search(r"(\d{1,2})", t)
+    if m:
+        n = int(m.group(1))
+        if n <= 3:
+            return "0-3歳"
+        if n <= 6:
+            return "4-6歳"
+        if n <= 9:
+            return "7-9歳"
+        if n <= 12:
+            return "10-12歳"
+        return "13歳以上"
+    # 文言パターン
+    if any(w in t for w in ("赤ちゃん", "乳児", "乳幼児")):
+        return "0-3歳"
+    if any(w in t for w in ("幼稚園", "保育園", "年少", "年中", "年長")):
+        return "4-6歳"
+    if any(w in t for w in ("小学校低学年", "小学生低学年", "小1", "小2", "小3", "低学年")):
+        return "7-9歳"
+    if any(w in t for w in ("小学校高学年", "小学生高学年", "小4", "小5", "小6", "高学年")):
+        return "10-12歳"
+    if any(w in t for w in ("中学生", "中学校", "中1", "中2", "中3", "高校生", "高校")):
+        return "13歳以上"
+    return "不明"
 
 # 問い合わせ内容の主要カテゴリ（月次シート 4 行目の見出しに合わせる）。
 # これに含まれない値はすべて「その他」に丸める。
@@ -455,6 +499,12 @@ def _load_ops_one(pub_base: str, gid: str, call_center: str) -> pd.DataFrame:
 
     df["request_category"] = df["request"].map(_categorize_request)
     df["banshaku_category"] = df["banshaku_action"].map(_categorize_banshaku)
+    # Co-HeartCS 用: 列が存在すれば年齢バケット列を追加
+    if "child_age" in df.columns:
+        df["child_age_bucket"] = df["child_age"].map(bucket_child_age)
+    else:
+        df["child_age"] = ""
+        df["child_age_bucket"] = ""
 
     df["is_cancel"] = df["request"].fillna("").str.contains("解約", na=False)
     df["is_first_time_cancel"] = df["is_cancel"] & (df["subscription_count"] == "初回")

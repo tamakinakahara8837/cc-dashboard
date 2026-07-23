@@ -11,6 +11,7 @@ from typing import Optional
 import pandas as pd
 
 from data_loader import (
+    AGE_BUCKET_ORDER,
     BANSHAKU_CANCEL_SET,
     BANSHAKU_COURSE_CHANGE_SET,
     BANSHAKU_ORDER,
@@ -243,6 +244,134 @@ def other_cancel_reason_breakdown(df: pd.DataFrame) -> pd.DataFrame:
         ),
     ).reset_index()
     return grp.sort_values("count", ascending=False).reset_index(drop=True)
+
+
+def has_child_age_data(df: pd.DataFrame) -> bool:
+    """Co-HeartCS 用: `child_age_bucket` 列に有効なデータがあるか。"""
+    if df.empty or "child_age_bucket" not in df.columns:
+        return False
+    return bool((df["child_age_bucket"].fillna("") != "").any())
+
+
+def _ordered_age_bucket_col(series: pd.Series) -> pd.Categorical:
+    """年齢バケット列を規定順に並べるための Categorical に変換。"""
+    return pd.Categorical(series, categories=AGE_BUCKET_ORDER, ordered=True)
+
+
+def child_age_distribution(df: pd.DataFrame) -> pd.DataFrame:
+    """年齢バケット別 応対件数。戻り値: columns=[age_bucket, count]"""
+    if not has_child_age_data(df):
+        return pd.DataFrame(columns=["age_bucket", "count"])
+    sub = df[df["child_age_bucket"].fillna("") != ""].copy()
+    grp = sub["child_age_bucket"].value_counts().reset_index()
+    grp.columns = ["age_bucket", "count"]
+    grp["age_bucket"] = _ordered_age_bucket_col(grp["age_bucket"])
+    return grp.sort_values("age_bucket").reset_index(drop=True)
+
+
+def child_age_cross(
+    df: pd.DataFrame,
+    group_col: str,
+    *,
+    exploded: bool = False,
+    top_n: Optional[int] = None,
+    filter_cancel: bool = False,
+) -> pd.DataFrame:
+    """年齢バケット × 任意カラム のクロス集計。
+
+    Args:
+        group_col: グループ化する列名（request_category, product, course, cancel_reason ...）
+        exploded: 複数選択セル（カンマ区切り）を展開してから集計するか
+        top_n: 集計後に上位 N 個の group_col 値のみを残す
+        filter_cancel: True なら is_cancel の行だけを対象にする
+    戻り値: columns=[age_bucket, <group_col>, count]
+    """
+    empty = pd.DataFrame(columns=["age_bucket", group_col, "count"])
+    if not has_child_age_data(df):
+        return empty
+    sub = df[df["child_age_bucket"].fillna("") != ""].copy()
+    if filter_cancel:
+        sub = sub[sub["is_cancel"]]
+    if sub.empty:
+        return empty
+    if exploded:
+        sub = explode_multi(sub, group_col)
+    else:
+        sub = sub[sub[group_col].fillna("") != ""]
+    if sub.empty:
+        return empty
+    if top_n:
+        top_vals = sub[group_col].value_counts().head(top_n).index.tolist()
+        sub = sub[sub[group_col].isin(top_vals)]
+    cross = (
+        sub.groupby(["child_age_bucket", group_col])
+        .size().reset_index(name="count")
+        .rename(columns={"child_age_bucket": "age_bucket"})
+    )
+    cross["age_bucket"] = _ordered_age_bucket_col(cross["age_bucket"])
+    return cross.sort_values(["age_bucket", "count"], ascending=[True, False]).reset_index(drop=True)
+
+
+def child_age_summary(df: pd.DataFrame) -> pd.DataFrame:
+    """年齢バケット別の総合サマリ（横断KPI表）。
+
+    列: 年齢 / 応対件数 / 解約件数 / 解約率 / 継続応援成功率 /
+        新規初回解約 / センターワード / 温度感上昇 / 嬉しい声
+    """
+    empty = pd.DataFrame(columns=[
+        "年齢", "応対件数", "解約件数", "解約率", "継続応援成功率",
+        "新規初回解約", "センターワード", "温度感上昇", "嬉しい声",
+    ])
+    if not has_child_age_data(df):
+        return empty
+    sub = df[df["child_age_bucket"].fillna("") != ""].copy()
+    if sub.empty:
+        return empty
+    agg = sub.groupby("child_age_bucket").agg(
+        応対件数=("timestamp", "size"),
+        解約件数=("is_cancel", "sum"),
+        新規初回解約=("is_first_time_cancel", "sum"),
+        _reten_ok=("retention_success", "sum"),
+        _reten_valid=("retention_valid", "sum"),
+        センターワード=("voc_center_word", "sum"),
+        温度感上昇=("is_escalation", "sum"),
+        嬉しい声=("voc_positive", "sum"),
+    ).reset_index().rename(columns={"child_age_bucket": "年齢"})
+    agg["解約率"] = agg["解約件数"] / agg["応対件数"]
+    agg["継続応援成功率"] = agg.apply(
+        lambda r: (r["_reten_ok"] / r["_reten_valid"]) if r["_reten_valid"] > 0 else None,
+        axis=1,
+    )
+    agg = agg.drop(columns=["_reten_ok", "_reten_valid"])
+    # 順序
+    agg["_o"] = agg["年齢"].map({b: i for i, b in enumerate(AGE_BUCKET_ORDER)}).fillna(99)
+    agg = agg.sort_values("_o").drop(columns="_o").reset_index(drop=True)
+    return agg[[
+        "年齢", "応対件数", "解約件数", "解約率", "継続応援成功率",
+        "新規初回解約", "センターワード", "温度感上昇", "嬉しい声",
+    ]]
+
+
+def child_age_retention(df: pd.DataFrame) -> pd.DataFrame:
+    """年齢バケット別の継続応援成功率。
+
+    戻り値: columns=[age_bucket, success, total_valid, rate]
+    """
+    empty = pd.DataFrame(columns=["age_bucket", "success", "total_valid", "rate"])
+    if not has_child_age_data(df):
+        return empty
+    valid = df[
+        (df["child_age_bucket"].fillna("") != "") & df["retention_valid"]
+    ]
+    if valid.empty:
+        return empty
+    grp = valid.groupby("child_age_bucket").agg(
+        success=("retention_success", "sum"),
+        total_valid=("retention_success", "size"),
+    ).reset_index().rename(columns={"child_age_bucket": "age_bucket"})
+    grp["rate"] = grp["success"] / grp["total_valid"]
+    grp["age_bucket"] = _ordered_age_bucket_col(grp["age_bucket"])
+    return grp.sort_values("age_bucket").reset_index(drop=True)
 
 
 def other_cancel_reason_raw(df: pd.DataFrame) -> pd.DataFrame:
