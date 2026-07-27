@@ -113,8 +113,12 @@ def load_special_course_name() -> Optional[str]:
 def load_theme_name() -> str:
     """`st.secrets["theme"]["preset"]` からテーマ名を読む。無ければ "gold"。
 
-    有効な値: "gold"（hajuCS デフォルト）, "green"（Co-HeartCS 用）
+    有効な値:
+      - "gold"  ... hajuCS デフォルト（クリーム＆ゴールド）
+      - "green" ... Co-HeartCS 用（薄緑）
+      - "blue"  ... TOARUHI 用（青系）
     """
+    valid = ("gold", "green", "blue")
     try:
         secrets_obj = getattr(st, "secrets", None)
         if secrets_obj is None:
@@ -124,7 +128,7 @@ def load_theme_name() -> str:
         except Exception:
             return "gold"
         preset = str(preset).lower().strip() if preset else "gold"
-        return preset if preset in ("gold", "green") else "gold"
+        return preset if preset in valid else "gold"
     except BaseException:
         return "gold"
 

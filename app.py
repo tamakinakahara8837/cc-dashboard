@@ -84,6 +84,26 @@ THEME_PALETTES: dict[str, dict[str, str]] = {
         "expander_bg": "rgba(220, 237, 200, 0.5)",
         "caption": "#33691e",
     },
+    "blue": {
+        "h1_text": "#0d47a1",
+        "h1_grad_start": "#bbdefb",
+        "h1_grad_end": "#e3f2fd",
+        "h1_border": "#1976d2",
+        "h3_text": "#1565c0",
+        "h3_border": "rgba(25, 118, 210, 0.4)",
+        "metric_border": "rgba(25, 118, 210, 0.2)",
+        "metric_hover": "rgba(25, 118, 210, 0.2)",
+        "sidebar_bg": "#e3f2fd",
+        "sidebar_border": "rgba(25, 118, 210, 0.2)",
+        "sidebar_h3": "#1565c0",
+        "sidebar_h3_border": "rgba(25, 118, 210, 0.35)",
+        "hr_border": "rgba(25, 118, 210, 0.45)",
+        "tab_active": "#1565c0",
+        "tab_highlight": "#1976d2",
+        "df_border": "rgba(25, 118, 210, 0.2)",
+        "expander_bg": "rgba(187, 222, 251, 0.5)",
+        "caption": "#0d47a1",
+    },
 }
 _theme_name = load_theme_name()
 T = THEME_PALETTES.get(_theme_name, THEME_PALETTES["gold"])
