@@ -515,8 +515,9 @@ def compare_by(
             _inc=("incoming_count", "sum"),
             _rsp=("response_count", "sum"),
         )
-        r_all["完了率"] = r_all["_cmp"] / r_all["_tot"]
-        r_all["応答率"] = r_all["_rsp"] / r_all["_inc"]
+        # 分母 0 の場合は NaN（0除算回避）
+        r_all["完了率"] = r_all["_cmp"].where(r_all["_tot"] > 0) / r_all["_tot"].where(r_all["_tot"] > 0)
+        r_all["応答率"] = r_all["_rsp"].where(r_all["_inc"] > 0) / r_all["_inc"].where(r_all["_inc"] > 0)
         agg = agg.merge(
             r_all[["完了率", "応答率"]].reset_index(),
             on="call_center", how="left",
