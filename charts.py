@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import uuid
+
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -10,11 +12,22 @@ GRANULARITY_LABEL = {"date": "日次", "week": "週次", "month": "月次"}
 
 
 def _empty_fig(message: str = "データがありません") -> go.Figure:
+    """データがない時のプレースホルダ図。
+
+    毎回一意になるように uirevision に UUID を入れる。
+    Streamlit の `st.plotly_chart` は plot 内容のハッシュで DOM 要素 id を計算するため、
+    同一内容の空グラフを複数回描画すると DuplicateElementId になる。それを回避する。
+    """
     fig = go.Figure()
     fig.add_annotation(
         text=message, showarrow=False, font=dict(size=14, color="gray")
     )
-    fig.update_layout(height=280, xaxis=dict(visible=False), yaxis=dict(visible=False))
+    fig.update_layout(
+        height=280,
+        xaxis=dict(visible=False),
+        yaxis=dict(visible=False),
+        uirevision=str(uuid.uuid4()),
+    )
     return fig
 
 
