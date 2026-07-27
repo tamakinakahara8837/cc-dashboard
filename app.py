@@ -32,6 +32,7 @@ from data_loader import (
     explode_multi,
     load_brand_name,
     load_data,
+    load_special_course_name,
     load_theme_name,
     previous_period,
 )
@@ -657,7 +658,8 @@ st.markdown("---")
 # ─────────────────────────────────────────────
 # 🌟 特別コース 内訳（hajuCS: 晩酌応援 / Co-HeartCS: すまいる応援 など、実データから自動検出）
 # ─────────────────────────────────────────────
-_special_course = metrics.detect_special_course_name(fdf)
+# 特別コース名: secrets 明示指定 > データから自動検出 の順で採用
+_special_course = load_special_course_name() or metrics.detect_special_course_name(fdf)
 _emoji = (
     "🌙" if "晩酌" in _special_course
     else "🌈" if ("すまいる" in _special_course or "スマイル" in _special_course)

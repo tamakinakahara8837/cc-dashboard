@@ -92,6 +92,24 @@ def load_brand_name() -> str:
         return DEFAULT_BRAND_NAME
 
 
+def load_special_course_name() -> Optional[str]:
+    """`st.secrets["brand"]["special_course"]` を読む。設定されていれば
+    特別コース内訳セクションのタイトルに使う。未設定なら None
+    （データから自動検出）。
+    """
+    try:
+        secrets_obj = getattr(st, "secrets", None)
+        if secrets_obj is None:
+            return None
+        try:
+            name = secrets_obj["brand"]["special_course"]
+        except Exception:
+            return None
+        return str(name) if name else None
+    except BaseException:
+        return None
+
+
 def load_theme_name() -> str:
     """`st.secrets["theme"]["preset"]` からテーマ名を読む。無ければ "gold"。
 
