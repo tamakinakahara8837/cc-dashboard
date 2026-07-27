@@ -127,9 +127,15 @@ COLUMN_RENAME = {
     "ご注文いただいているコースを選択してください": "course",
     "定期回数をご選択ください": "subscription_count",
     "継続応援は行いましたか？": "retention_result",
-    "晩酌対応内容": "banshaku_action",
-    "対応内容": "banshaku_action",  # N2 側は「対応内容」表記
-    "すまいる応援対応内容": "banshaku_action",  # Co-HeartCS はスマイル応援コース
+    # プレミアム系ブランドは商品名の見出しが長い注釈付き
+    "商品名(複購入の場合は今回のお問い合わせ商品を選択/複数商品の問い合わせの場合は上の記載がある商品を選択)": "product",
+    # 特別コース対応内容（ブランドで見出しが異なる）
+    "晩酌対応内容": "banshaku_action",           # hajuCS
+    "対応内容": "banshaku_action",              # N2 別表記
+    "すまいる応援対応内容": "banshaku_action",   # Co-HeartCS
+    "シークレット応援対応内容": "banshaku_action",  # プレミアム系ブランド
+    # プレミアム系ブランド固有: プレミアムコース受取回数
+    "プレミアムコースで何回受け取りされていますか？": "premium_receive_count",
     "解約希望理由を選択してください(複数選択可)": "cancel_reason",
     "VOCの入力があればお願いします！": "voc",
     "温度感が上がってしまった原因の選択をお願いします(複数選択可)": "escalation_cause",
@@ -276,21 +282,21 @@ BANSHAKU_ORDER: list[str] = [
     "満了解約",
     "差額あり途中解約",
     "差額なし途中解約",
-    "スマイル開始前解約",
+    "開始前解約",
     # 継続系
     "満了未満継続了承",
     "満了継続応援成功",
-    "スマイル開始前継続了承",
+    "開始前継続了承",
     # 開始前ムーブ（コース変更）
-    "スマイル開始前コース変更",
+    "開始前コース変更",
 ]
 BANSHAKU_CANCEL_SET: set[str] = {
-    "満了解約", "差額あり途中解約", "差額なし途中解約", "スマイル開始前解約",
+    "満了解約", "差額あり途中解約", "差額なし途中解約", "開始前解約",
 }
 BANSHAKU_RETENTION_SET: set[str] = {
-    "満了未満継続了承", "満了継続応援成功", "スマイル開始前継続了承",
+    "満了未満継続了承", "満了継続応援成功", "開始前継続了承",
 }
-BANSHAKU_COURSE_CHANGE_SET: set[str] = {"スマイル開始前コース変更"}
+BANSHAKU_COURSE_CHANGE_SET: set[str] = {"開始前コース変更"}
 
 
 # ─────────────────────────────────────────────
@@ -481,14 +487,15 @@ def _categorize_banshaku(value: str) -> str:
         return "満了継続応援成功"
     if "満了未満途中解約" in v:
         return "差額なし途中解約" if "差額なし" in v else "差額あり途中解約"
-    # Co-HeartCS 固有（スマイル開始前）
-    if "スマイル開始前" in v or "すまいる開始前" in v:
+    # ブランド固有の「開始前」系（Co-HeartCS: スマイル / プレミアム系: シークレット など）
+    # プレフィックスを問わず「開始前」を含む記述は共通ラベルに正規化
+    if "開始前" in v:
         if "解約" in v:
-            return "スマイル開始前解約"
+            return "開始前解約"
         if "継続了承" in v or "継続" in v:
-            return "スマイル開始前継続了承"
+            return "開始前継続了承"
         if "コース変更" in v or "変更" in v:
-            return "スマイル開始前コース変更"
+            return "開始前コース変更"
     return REQUEST_OTHER_LABEL
 
 
@@ -577,6 +584,15 @@ def _load_ops_one(pub_base: str, gid: str, call_center: str) -> pd.DataFrame:
         df["child_age_num"] = None
         df["child_age_bucket"] = ""
         df["child_age_label"] = ""
+
+    # プレミアム系ブランド用: プレミアムコース受取回数（数値派生）
+    if "premium_receive_count" in df.columns:
+        df["premium_receive_num"] = pd.to_numeric(
+            df["premium_receive_count"], errors="coerce"
+        )
+    else:
+        df["premium_receive_count"] = ""
+        df["premium_receive_num"] = None
 
     df["is_cancel"] = df["request"].fillna("").str.contains("解約", na=False)
     df["is_first_time_cancel"] = df["is_cancel"] & (df["subscription_count"] == "初回")

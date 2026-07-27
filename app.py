@@ -658,7 +658,12 @@ st.markdown("---")
 # 🌟 特別コース 内訳（hajuCS: 晩酌応援 / Co-HeartCS: すまいる応援 など、実データから自動検出）
 # ─────────────────────────────────────────────
 _special_course = metrics.detect_special_course_name(fdf)
-_emoji = "🌙" if "晩酌" in _special_course else ("🌈" if "すまいる" in _special_course or "スマイル" in _special_course else "🌟")
+_emoji = (
+    "🌙" if "晩酌" in _special_course
+    else "🌈" if ("すまいる" in _special_course or "スマイル" in _special_course)
+    else "💎" if ("プレミアム" in _special_course or "シークレット" in _special_course)
+    else "🌟"
+)
 st.markdown(f"### {_emoji} {_special_course} 内訳")
 st.caption(
     "対応内容の分類。解約系（満了解約 / 途中解約 / スマイル開始前解約など）＋ "
