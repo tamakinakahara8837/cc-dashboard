@@ -380,6 +380,15 @@ with st.sidebar:
     )
     subs = st.multiselect("定期回数", subs_opt)
 
+    # TV 購入フィルタ（HAN.d などの列があるブランドのみ表示）
+    tv_opt: list[str] = []
+    if "tv_purchase" in ops_all.columns:
+        tv_opt = sorted(v for v in ops_all["tv_purchase"].dropna().unique() if v)
+    tv_sel: list[str] = st.multiselect(
+        "TV購入", tv_opt,
+        help='"TV" / "TV以外" の絞り込み（該当列があるブランドのみ）',
+    ) if tv_opt else []
+
     show_prev = st.checkbox("前期比を表示", value=True)
 
 # ─────────────────────────────────────────────
@@ -392,6 +401,7 @@ fdf = apply_ops_filters(
     agents=agents or None, products=products or None,
     courses=courses or None, requests=requests_sel or None,
     subscription_counts=subs or None,
+    tv_purchase=tv_sel or None,
 )
 
 frates = apply_rate_filters(
@@ -416,6 +426,7 @@ if show_prev:
         agents=agents or None, products=products or None,
         courses=courses or None, requests=requests_sel or None,
         subscription_counts=subs or None,
+        tv_purchase=tv_sel or None,
     )
 
 # ─────────────────────────────────────────────

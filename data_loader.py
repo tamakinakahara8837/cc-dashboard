@@ -241,6 +241,8 @@ COLUMN_RENAME = {
     "タイムスタンプ": "timestamp",
     "担当者": "agent",
     "顧客番号　※未購入者・不明は「なし」": "customer_id",
+    # HAN.d 固有: TV通販経由の購入かどうか（"TV" / "TV以外"）
+    "TVからの購入ですか？": "tv_purchase",
     "商品名": "product",
     "お客様のご希望された内容を選択してください": "request",
     "ご注文いただいているコースを選択してください": "course",
@@ -253,8 +255,9 @@ COLUMN_RENAME = {
     "対応内容": "banshaku_action",              # N2 別表記
     "すまいる応援対応内容": "banshaku_action",   # Co-HeartCS
     "シークレット応援対応内容": "banshaku_action",  # プレミアム系ブランド
-    # プレミアム系ブランド固有: プレミアムコース受取回数
-    "プレミアムコースで何回受け取りされていますか？": "premium_receive_count",
+    # プレミアム系ブランド固有: 特別コースの受取回数
+    "プレミアムコースで何回受け取りされていますか？": "premium_receive_count",   # TOARUHI
+    "シークレットコースで何回受け取りされていますか？": "premium_receive_count",  # HAN.d
     "解約希望理由を選択してください(複数選択可)": "cancel_reason",
     "VOCの入力があればお願いします！": "voc",
     "温度感が上がってしまった原因の選択をお願いします(複数選択可)": "escalation_cause",
@@ -713,6 +716,10 @@ def _load_ops_one(pub_base: str, gid: str, call_center: str) -> pd.DataFrame:
         df["premium_receive_count"] = ""
         df["premium_receive_num"] = None
 
+    # HAN.d 固有: TV通販経由の購入か（"TV" / "TV以外"）
+    if "tv_purchase" not in df.columns:
+        df["tv_purchase"] = ""
+
     df["is_cancel"] = df["request"].fillna("").str.contains("解約", na=False)
     df["is_first_time_cancel"] = df["is_cancel"] & (df["subscription_count"] == "初回")
     df["is_banshaku_retention"] = df["banshaku_category"].isin(BANSHAKU_RETENTION_SET)
@@ -925,6 +932,7 @@ def apply_ops_filters(
     courses: Optional[list[str]] = None,
     requests: Optional[list[str]] = None,
     subscription_counts: Optional[list[str]] = None,
+    tv_purchase: Optional[list[str]] = None,
 ) -> pd.DataFrame:
     out = df
     if date_from is not None:
@@ -946,6 +954,8 @@ def apply_ops_filters(
     if products:
         pat = "|".join(re.escape(p) for p in products)
         out = out[out["product"].fillna("").str.contains(pat, regex=True)]
+    if tv_purchase and "tv_purchase" in out.columns:
+        out = out[out["tv_purchase"].isin(tv_purchase)]
     return out.reset_index(drop=True)
 
 
