@@ -246,22 +246,44 @@ details summary {{
     color: {T["caption"]} !important;
 }}
 
-/* ブランド切替ピル (segmented_control / pills) - ページ最上部に大きめ表示 */
+/* ブランド切替ピル (segmented_control / pills) - 大きく横幅いっぱいに */
 div[data-testid="stSegmentedControl"],
 div[data-testid="stPills"] {{
-    margin-bottom: 8px;
+    margin-bottom: 16px;
+    width: 100% !important;
+}}
+/* 内側のボタン群を横いっぱい均等割りに */
+div[data-testid="stSegmentedControl"] > div,
+div[data-testid="stPills"] > div,
+div[data-testid="stSegmentedControl"] [role="group"],
+div[data-testid="stPills"] [role="group"] {{
+    display: flex !important;
+    width: 100% !important;
+    gap: 10px !important;
 }}
 div[data-testid="stSegmentedControl"] button,
 div[data-testid="stPills"] button {{
-    font-size: 15px !important;
-    font-weight: 600 !important;
-    padding: 8px 20px !important;
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    padding: 16px 12px !important;
+    border-radius: 12px !important;
+    letter-spacing: 0.03em;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    transition: transform 0.1s ease, box-shadow 0.15s ease;
+}}
+div[data-testid="stSegmentedControl"] button:hover,
+div[data-testid="stPills"] button:hover {{
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.08);
 }}
 div[data-testid="stSegmentedControl"] button[aria-pressed="true"],
 div[data-testid="stPills"] button[aria-pressed="true"] {{
     background-color: {T["h1_border"]} !important;
     color: white !important;
     border-color: {T["h1_border"]} !important;
+    box-shadow: 0 3px 10px {T["metric_hover"]};
 }}
 </style>
 """,
