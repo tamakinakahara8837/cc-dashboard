@@ -246,48 +246,62 @@ details summary {{
     color: {T["caption"]} !important;
 }}
 
-/* ブランド切替ピル（key=selected_brand の container を全部強制で大きく） */
+/* ブランド切替ピル（独立チップスタイル・大きくして文字省略も解除） */
 .st-key-selected_brand {{
-    margin-bottom: 20px !important;
+    margin-bottom: 24px !important;
 }}
-.st-key-selected_brand > div,
+/* コンテナ内を横並び + gap */
 .st-key-selected_brand [data-baseweb="button-group"],
 .st-key-selected_brand [role="radiogroup"],
-.st-key-selected_brand [role="group"] {{
+.st-key-selected_brand [role="group"],
+.st-key-selected_brand > div:first-child {{
     display: flex !important;
-    flex-wrap: nowrap !important;
-    width: 100% !important;
-    gap: 10px !important;
+    flex-wrap: wrap !important;
+    gap: 14px !important;
+    justify-content: flex-start !important;
 }}
+/* 各ピルボタン */
 .st-key-selected_brand button,
 .st-key-selected_brand [role="button"],
-.st-key-selected_brand label {{
-    flex: 1 1 0 !important;
-    min-width: 0 !important;
-    font-size: 20px !important;
+.st-key-selected_brand [data-testid*="stBaseButton"] {{
+    font-size: 22px !important;
     font-weight: 700 !important;
-    padding: 20px 12px !important;
+    padding: 18px 32px !important;
+    min-width: 160px !important;
+    height: auto !important;
     border-radius: 14px !important;
     letter-spacing: 0.04em;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     transition: transform 0.1s ease, box-shadow 0.15s ease;
     line-height: 1.2 !important;
-    text-align: center !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+}}
+/* ボタン内側の label / span 要素も省略解除 */
+.st-key-selected_brand button *,
+.st-key-selected_brand [role="button"] * {{
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+    max-width: none !important;
+    font-size: inherit !important;
+    font-weight: inherit !important;
 }}
 .st-key-selected_brand button:hover,
-.st-key-selected_brand [role="button"]:hover,
-.st-key-selected_brand label:hover {{
-    transform: translateY(-1px);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+.st-key-selected_brand [role="button"]:hover {{
+    transform: translateY(-2px);
+    box-shadow: 0 5px 12px rgba(0,0,0,0.1);
 }}
+/* 選択中ピル */
 .st-key-selected_brand button[aria-pressed="true"],
 .st-key-selected_brand button[aria-checked="true"],
 .st-key-selected_brand [role="button"][aria-pressed="true"],
-.st-key-selected_brand input:checked + div {{
+.st-key-selected_brand [kind="primary"] {{
     background-color: {T["h1_border"]} !important;
     color: white !important;
     border-color: {T["h1_border"]} !important;
-    box-shadow: 0 4px 12px {T["metric_hover"]};
+    box-shadow: 0 4px 14px {T["metric_hover"]};
 }}
 </style>
 """,
