@@ -92,6 +92,69 @@ def load_brand_name() -> str:
         return DEFAULT_BRAND_NAME
 
 
+def load_brands_config() -> "dict[str, dict]":
+    """マルチブランド構成を読む。`[brands.<key>]` セクション群を辞書化。
+
+    Secrets の書式例::
+
+        [brands.haju]
+        display_name = "hajuCS"
+        theme = "gold"
+        # special_course は省略可（データから自動検出）
+
+        [brands.haju.sheets]
+        LU = "https://..."
+        N2 = "https://..."
+
+        [brands.coheart]
+        display_name = "Co-HeartCS"
+        theme = "green"
+        special_course = "すまいる応援コース"
+
+        [brands.coheart.sheets]
+        LU = "..."
+        N2 = "..."
+
+    戻り値: {brand_key: {display_name, theme, special_course, sheets: {LU, N2, ...}}}
+    `[brands]` が無ければ空辞書（従来の単一ブランドモード）。
+    """
+    empty: dict[str, dict] = {}
+    try:
+        secrets_obj = getattr(st, "secrets", None)
+        if secrets_obj is None:
+            return empty
+        try:
+            raw = secrets_obj["brands"]
+        except Exception:
+            return empty
+        if not raw:
+            return empty
+        result: dict[str, dict] = {}
+        try:
+            for key, cfg in dict(raw).items():
+                d = dict(cfg)
+                sheets_raw = d.get("sheets", {})
+                sheets = {}
+                try:
+                    for k, v in dict(sheets_raw).items():
+                        if v:
+                            sheets[str(k)] = str(v)
+                except Exception:
+                    sheets = {}
+                sc = d.get("special_course")
+                result[str(key)] = {
+                    "display_name": str(d.get("display_name", key)),
+                    "theme": str(d.get("theme", "gold")),
+                    "special_course": str(sc) if sc else None,
+                    "sheets": sheets,
+                }
+        except Exception:
+            return empty
+        return result
+    except BaseException:
+        return empty
+
+
 def load_special_course_name() -> Optional[str]:
     """`st.secrets["brand"]["special_course"]` を読む。設定されていれば
     特別コース内訳セクションのタイトルに使う。未設定なら None
@@ -744,12 +807,23 @@ class LoadResult:
 
 
 @st.cache_data(ttl=600, show_spinner="スプレッドシートを取得中…")
-def load_data() -> LoadResult:
+def load_data(sheets_key: tuple = ()) -> LoadResult:
+    """スプレッドシートを取得。マルチブランドでは選択中ブランドの sheets を渡す。
+
+    Args:
+        sheets_key: ((cc_name, url), ...) タプル。空タプルなら module-level `SHEETS`。
+                    キャッシュキーとして使うのでハッシュ可能な tuple で渡す。
+    """
+    if sheets_key:
+        sheets_map: dict[str, str] = dict(sheets_key)
+    else:
+        sheets_map = SHEETS
+
     ops_frames: list[pd.DataFrame] = []
     rate_frames: list[pd.DataFrame] = []
     monthly_tabs: dict[str, list[str]] = {}
 
-    for cc, base in SHEETS.items():
+    for cc, base in sheets_map.items():
         tabs = discover_tabs(base)
 
         # 応対記録

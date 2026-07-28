@@ -15,6 +15,8 @@
 
 from __future__ import annotations
 
+from typing import Optional
+
 import pandas as pd
 import streamlit as st
 
@@ -31,14 +33,19 @@ from data_loader import (
     apply_rate_filters,
     explode_multi,
     load_brand_name,
+    load_brands_config,
     load_data,
     load_special_course_name,
     load_theme_name,
     previous_period,
 )
 
-BRAND = load_brand_name()
-DASHBOARD_TITLE = f"{BRAND}ダッシュボード"
+# ─────────────────────────────────────────────
+# マルチブランド or 単一ブランドを判定
+# `[brands.*]` があればマルチブランドモード、無ければ従来の単一ブランドモード
+# ─────────────────────────────────────────────
+_BRANDS_CONFIG: dict[str, dict] = load_brands_config()
+_MULTI_BRAND: bool = len(_BRANDS_CONFIG) > 0
 
 # ─────────────────────────────────────────────
 # テーマパレット（Secrets で "gold" or "green" を指定）
@@ -105,12 +112,46 @@ THEME_PALETTES: dict[str, dict[str, str]] = {
         "caption": "#0d47a1",
     },
 }
-_theme_name = load_theme_name()
+# ─────────────────────────────────────────────
+# ブランドコンテキスト決定
+# マルチブランドモード: `st.session_state["selected_brand"]` を参照
+#   （サイドバーの selectbox が同じキーで書き込む → 選択変更で自動反映）
+# 単一ブランドモード:  従来通り Secrets から直接読む
+# ─────────────────────────────────────────────
+_special_course_override: Optional[str] = None
+_sheets_key: tuple = ()
+
+if _MULTI_BRAND:
+    _brand_keys: list[str] = list(_BRANDS_CONFIG.keys())
+    _default_brand_key = _brand_keys[0]
+    _selected_brand_key = st.session_state.get("selected_brand", _default_brand_key)
+    if _selected_brand_key not in _BRANDS_CONFIG:
+        _selected_brand_key = _default_brand_key
+    _current = _BRANDS_CONFIG[_selected_brand_key]
+    BRAND = _current["display_name"]
+    _theme_name = _current.get("theme", "gold")
+    _special_course_override = _current.get("special_course")
+    # sheets_key はハッシュ可能な tuple にして cache_data のキーに使う
+    _sheets_key = tuple(sorted(_current["sheets"].items()))
+else:
+    BRAND = load_brand_name()
+    _theme_name = load_theme_name()
+    _special_course_override = load_special_course_name()
+
+DASHBOARD_TITLE = f"{BRAND}ダッシュボード"
 T = THEME_PALETTES.get(_theme_name, THEME_PALETTES["gold"])
 
 st.set_page_config(
     page_title=DASHBOARD_TITLE, page_icon="📊", layout="wide",
 )
+
+# マルチブランドではブランド切替時に set_page_config で設定した page_title が
+# 更新できないため、JS でブラウザタブ名を動的に上書きする
+if _MULTI_BRAND:
+    st.markdown(
+        f"<script>document.title = {DASHBOARD_TITLE!r};</script>",
+        unsafe_allow_html=True,
+    )
 
 # ─────────────────────────────────────────────
 # カスタム CSS（デザイン仕上げ）
@@ -214,7 +255,7 @@ details summary {{
 # ─────────────────────────────────────────────
 # データ取得
 # ─────────────────────────────────────────────
-result = load_data()
+result = load_data(sheets_key=_sheets_key)
 ops_all = result.ops
 rates_all = result.rates
 
@@ -222,6 +263,22 @@ rates_all = result.rates
 # サイドバー
 # ─────────────────────────────────────────────
 with st.sidebar:
+    # マルチブランド: ブランドセレクタを最上部に配置
+    # 選択されたキーを `st.session_state["selected_brand"]` に書き込む。
+    # 次のリラン時、ページ冒頭のブランドコンテキスト決定処理がそれを読んで反映する。
+    if _MULTI_BRAND:
+        st.markdown("### 🏷 ブランド")
+        st.selectbox(
+            "ブランド",
+            _brand_keys,
+            index=_brand_keys.index(_selected_brand_key),
+            format_func=lambda k: _BRANDS_CONFIG[k]["display_name"],
+            key="selected_brand",
+            label_visibility="collapsed",
+            help="切替時にそのブランドのデータだけを読込み。既に読込済みなら即表示（10分キャッシュ）。",
+        )
+        st.markdown("---")
+
     st.markdown("### 🔄 データ")
     st.caption(f"最終取得: {result.loaded_at.strftime('%Y-%m-%d %H:%M:%S')} (JST)")
     st.caption(
@@ -239,7 +296,11 @@ with st.sidebar:
     st.markdown("### 🔍 フィルタ")
 
     # コールセンター
-    cc_options = list(SHEETS.keys())
+    # 選択中ブランドのシート（マルチブランド時）or 従来 SHEETS
+    if _MULTI_BRAND:
+        cc_options = list(_current["sheets"].keys())
+    else:
+        cc_options = list(SHEETS.keys())
     call_centers = st.multiselect(
         "コールセンター", cc_options, default=cc_options,
     )
@@ -679,7 +740,7 @@ st.markdown("---")
 # 🌟 特別コース 内訳（hajuCS: 晩酌応援 / Co-HeartCS: すまいる応援 など、実データから自動検出）
 # ─────────────────────────────────────────────
 # 特別コース名: secrets 明示指定 > データから自動検出 の順で採用
-_special_course = load_special_course_name() or metrics.detect_special_course_name(fdf)
+_special_course = _special_course_override or metrics.detect_special_course_name(fdf)
 _emoji = (
     "🌙" if "晩酌" in _special_course
     else "🌈" if ("すまいる" in _special_course or "スマイル" in _special_course)
