@@ -245,6 +245,24 @@ details summary {{
 .stCaption, div[data-testid="stCaptionContainer"] {{
     color: {T["caption"]} !important;
 }}
+
+/* ブランド切替ピル (segmented_control / pills) - ページ最上部に大きめ表示 */
+div[data-testid="stSegmentedControl"],
+div[data-testid="stPills"] {{
+    margin-bottom: 8px;
+}}
+div[data-testid="stSegmentedControl"] button,
+div[data-testid="stPills"] button {{
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    padding: 8px 20px !important;
+}}
+div[data-testid="stSegmentedControl"] button[aria-pressed="true"],
+div[data-testid="stPills"] button[aria-pressed="true"] {{
+    background-color: {T["h1_border"]} !important;
+    color: white !important;
+    border-color: {T["h1_border"]} !important;
+}}
 </style>
 """,
     unsafe_allow_html=True,
@@ -264,22 +282,6 @@ rates_all = result.rates
 # サイドバー
 # ─────────────────────────────────────────────
 with st.sidebar:
-    # マルチブランド: ブランドセレクタを最上部に配置
-    # 選択されたキーを `st.session_state["selected_brand"]` に書き込む。
-    # 次のリラン時、ページ冒頭のブランドコンテキスト決定処理がそれを読んで反映する。
-    if _MULTI_BRAND:
-        st.markdown("### 🏷 ブランド")
-        st.selectbox(
-            "ブランド",
-            _brand_keys,
-            index=_brand_keys.index(_selected_brand_key),
-            format_func=lambda k: _BRANDS_CONFIG[k]["display_name"],
-            key="selected_brand",
-            label_visibility="collapsed",
-            help="切替時にそのブランドのデータだけを読込み。既に読込済みなら即表示（10分キャッシュ）。",
-        )
-        st.markdown("---")
-
     st.markdown("### 🔄 データ")
     st.caption(f"最終取得: {result.loaded_at.strftime('%Y-%m-%d %H:%M:%S')} (JST)")
     st.caption(
@@ -428,6 +430,33 @@ if show_prev:
         subscription_counts=subs or None,
         tv_purchase=tv_sel or None,
     )
+
+# ─────────────────────────────────────────────
+# 🏷 ブランド切替（マルチブランド時のみページ最上部にピル型で表示）
+# ─────────────────────────────────────────────
+if _MULTI_BRAND:
+    # segmented_control は Streamlit 1.42+。widget は key="selected_brand" で
+    # session_state に書き込むので、次リランで冒頭のコンテキスト決定処理が拾う。
+    _picker = getattr(st, "segmented_control", None) or getattr(st, "pills", None)
+    if _picker is not None:
+        _picker(
+            "ブランド",
+            _brand_keys,
+            format_func=lambda k: _BRANDS_CONFIG[k]["display_name"],
+            default=_selected_brand_key,
+            selection_mode="single",
+            key="selected_brand",
+            label_visibility="collapsed",
+            help="4ブランド切替。初回選択時のみ読込み、以降10分キャッシュで即表示。",
+        )
+    else:
+        # 極古 Streamlit のフォールバック
+        st.radio(
+            "ブランド", _brand_keys,
+            index=_brand_keys.index(_selected_brand_key),
+            format_func=lambda k: _BRANDS_CONFIG[k]["display_name"],
+            key="selected_brand", horizontal=True, label_visibility="collapsed",
+        )
 
 # ─────────────────────────────────────────────
 # ヘッダ
