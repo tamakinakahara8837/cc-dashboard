@@ -184,13 +184,36 @@ st.markdown(
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap');
 
-/* 全体タイポグラフィ */
-html, body, [class*="css"], .stApp, .stApp * {{
+/* 全体タイポグラフィ（アイコンフォントを壊さないよう継承ベース） */
+html, body, [class*="css"], .stApp {{
     font-family: "Inter", "Hiragino Sans", "Hiragino Kaku Gothic ProN",
                  "Yu Gothic", "Meiryo", "Segoe UI", sans-serif;
-    font-feature-settings: "palt", "cv11";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+}}
+.stApp p, .stApp span:not([class*="material"]):not([class*="Material"]):not([class*="icon"]):not([class*="Icon"]),
+.stApp div, .stApp label, .stApp li, .stApp td, .stApp th,
+.stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6,
+.stApp button, .stApp input, .stApp textarea, .stApp select {{
+    font-family: inherit;
+    font-feature-settings: "palt";
+}}
+/* Material Icons / Symbols のフォントは絶対上書きしない */
+.material-icons,
+.material-icons-outlined,
+.material-icons-round,
+.material-icons-sharp,
+.material-icons-two-tone,
+[class*="material-symbols"],
+[class*="MaterialIcon"],
+i[class*="material"],
+span[class*="material"] {{
+    font-family:
+        "Material Symbols Rounded",
+        "Material Symbols Outlined",
+        "Material Icons",
+        "Material Icons Outlined" !important;
+    font-feature-settings: normal !important;
 }}
 
 /* 背景: 極めてサトルなグラデ + わずかなアクセント */
