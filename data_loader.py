@@ -214,8 +214,9 @@ def load_theme_name() -> str:
       - "gold"  ... hajuCS デフォルト（クリーム＆ゴールド）
       - "green" ... Co-HeartCS 用（薄緑）
       - "blue"  ... TOARUHI 用（青系）
+      - "red"   ... HAN.d 用（赤系）
     """
-    valid = ("gold", "green", "blue")
+    valid = ("gold", "green", "blue", "red")
     try:
         secrets_obj = getattr(st, "secrets", None)
         if secrets_obj is None:

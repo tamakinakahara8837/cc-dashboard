@@ -112,6 +112,26 @@ THEME_PALETTES: dict[str, dict[str, str]] = {
         "expander_bg": "rgba(187, 222, 251, 0.5)",
         "caption": "#0d47a1",
     },
+    "red": {
+        "h1_text": "#7f1d1d",
+        "h1_grad_start": "#fecaca",
+        "h1_grad_end": "#fef2f2",
+        "h1_border": "#dc2626",
+        "h3_text": "#991b1b",
+        "h3_border": "rgba(220, 38, 38, 0.4)",
+        "metric_border": "rgba(220, 38, 38, 0.18)",
+        "metric_hover": "rgba(220, 38, 38, 0.22)",
+        "sidebar_bg": "#fef2f2",
+        "sidebar_border": "rgba(220, 38, 38, 0.18)",
+        "sidebar_h3": "#991b1b",
+        "sidebar_h3_border": "rgba(220, 38, 38, 0.35)",
+        "hr_border": "rgba(220, 38, 38, 0.45)",
+        "tab_active": "#b91c1c",
+        "tab_highlight": "#dc2626",
+        "df_border": "rgba(220, 38, 38, 0.18)",
+        "expander_bg": "rgba(254, 202, 202, 0.4)",
+        "caption": "#991b1b",
+    },
 }
 # ─────────────────────────────────────────────
 # ブランドコンテキスト決定
@@ -160,8 +180,9 @@ if _MULTI_BRAND:
 st.markdown(
     f"""
 <style>
-/* Google Fonts: 数字と英字は Inter、和文はヒラギノ系 */
+/* Google Fonts: 数字は Inter、和文はヒラギノ系 */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap');
 
 /* 全体タイポグラフィ */
 html, body, [class*="css"], .stApp, .stApp * {{
@@ -169,138 +190,186 @@ html, body, [class*="css"], .stApp, .stApp * {{
                  "Yu Gothic", "Meiryo", "Segoe UI", sans-serif;
     font-feature-settings: "palt", "cv11";
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }}
 
-/* 背景を穏やかにトーン付き（テーマの sidebar_bg をベースにかなり薄めた色） */
+/* 背景: 極めてサトルなグラデ + わずかなアクセント */
 .stApp {{
     background:
-        radial-gradient(ellipse 1200px 600px at 15% -10%, {T["h1_grad_start"]}44 0%, transparent 60%),
-        radial-gradient(ellipse 1000px 500px at 90% 100%, {T["h1_grad_end"]}66 0%, transparent 60%);
+        radial-gradient(ellipse 1400px 700px at 12% -8%, {T["h1_grad_start"]}22 0%, transparent 55%),
+        radial-gradient(ellipse 900px 500px at 95% 105%, {T["h1_border"]}0d 0%, transparent 55%),
+        #fafafa;
 }}
 
-/* ─── h1: ヒーローヘッダ風の大タイトル ─── */
+/* メインコンテンツエリアに余白を強化 */
+.stApp .main .block-container {{
+    padding-top: 3rem !important;
+    padding-bottom: 4rem !important;
+    max-width: 1400px;
+}}
+
+/* ─── h1: エディトリアル風の大タイトル ─── */
 .stApp h1 {{
+    font-family: "Space Grotesk", "Inter", sans-serif !important;
     color: {T["h1_text"]};
-    letter-spacing: -0.02em;
-    font-weight: 800 !important;
-    padding: 24px 32px;
+    letter-spacing: -0.035em;
+    font-weight: 700 !important;
+    font-size: 42px !important;
+    padding: 28px 36px;
     background: linear-gradient(135deg, {T["h1_grad_start"]} 0%, {T["h1_grad_end"]} 100%);
-    border: 1px solid rgba(0,0,0,0.03);
-    border-left: 8px solid {T["h1_border"]};
-    border-radius: 18px;
-    box-shadow:
-        0 1px 2px rgba(0,0,0,0.04),
-        0 10px 30px -8px rgba(0,0,0,0.08);
+    border: none;
+    border-left: 4px solid {T["h1_border"]};
+    border-radius: 6px;
+    box-shadow: 0 1px 30px -12px {T["h1_border"]}55;
     margin-top: 8px !important;
-    margin-bottom: 12px !important;
+    margin-bottom: 20px !important;
     position: relative;
     overflow: hidden;
+    line-height: 1.15;
 }}
-/* h1 の右上に微光アクセント */
+/* h1 の右下に極細アクセント */
 .stApp h1::after {{
     content: "";
     position: absolute;
-    top: -40%;
-    right: -10%;
-    width: 300px;
-    height: 300px;
-    background: radial-gradient(circle, rgba(255,255,255,0.5) 0%, transparent 60%);
+    top: 20%;
+    right: 6%;
+    width: 60px;
+    height: 60px;
+    border: 2px solid {T["h1_border"]}33;
+    border-radius: 50%;
+    pointer-events: none;
+}}
+.stApp h1::before {{
+    content: "";
+    position: absolute;
+    bottom: 20%;
+    right: 12%;
+    width: 24px;
+    height: 24px;
+    background: {T["h1_border"]}22;
+    border-radius: 50%;
     pointer-events: none;
 }}
 
-/* ─── h3: モダンな下線見出し（グラデ 2 段） ─── */
+/* ─── h3: ミニマルなアクセントバー + 大文字風 ─── */
 .stApp h3 {{
+    font-family: "Space Grotesk", "Inter", sans-serif !important;
     color: {T["h3_text"]};
-    font-weight: 700 !important;
-    letter-spacing: -0.01em;
-    margin-top: 36px !important;
-    margin-bottom: 14px !important;
-    padding: 4px 0 10px 0 !important;
+    font-weight: 600 !important;
+    font-size: 22px !important;
+    letter-spacing: -0.02em;
+    margin-top: 40px !important;
+    margin-bottom: 18px !important;
+    padding: 0 0 0 16px !important;
     border-bottom: none !important;
     position: relative;
+    line-height: 1.3;
 }}
-.stApp h3::after {{
+.stApp h3::before {{
     content: "";
     position: absolute;
-    bottom: 0;
+    top: 6px;
+    bottom: 6px;
     left: 0;
-    width: 100%;
-    height: 3px;
-    background: linear-gradient(90deg, {T["h1_border"]} 0%, {T["h3_border"]} 60%, transparent 100%);
+    width: 4px;
+    background: linear-gradient(180deg, {T["h1_border"]} 0%, {T["h3_border"]} 100%);
     border-radius: 2px;
 }}
 
-/* ─── KPI カード: 大きな数字 + 洗練された影 ─── */
+/* ─── KPI カード: フラット + シャープ ─── */
 div[data-testid="stMetric"] {{
-    background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.7) 100%);
-    padding: 20px 24px 22px 24px;
-    border-radius: 16px;
-    border: 1px solid {T["metric_border"]};
-    border-top: 3px solid {T["h1_border"]};
-    box-shadow:
-        0 1px 2px rgba(0,0,0,0.03),
-        0 8px 20px -6px rgba(0,0,0,0.06);
-    transition: transform 0.2s cubic-bezier(0.2,0.8,0.2,1), box-shadow 0.2s;
-    backdrop-filter: blur(4px);
+    background: white;
+    padding: 22px 24px 20px 24px;
+    border-radius: 8px;
+    border: 1px solid rgba(0,0,0,0.06);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    transition: transform 0.25s cubic-bezier(0.2,0.8,0.2,1), box-shadow 0.25s, border-color 0.2s;
+    position: relative;
+    overflow: hidden;
+}}
+/* 左サイドの縦アクセントバー（極細） */
+div[data-testid="stMetric"]::before {{
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 12px;
+    bottom: 12px;
+    width: 3px;
+    background: {T["h1_border"]};
+    border-radius: 0 2px 2px 0;
+    opacity: 0.9;
 }}
 div[data-testid="stMetric"]:hover {{
-    transform: translateY(-3px);
-    box-shadow:
-        0 2px 4px rgba(0,0,0,0.04),
-        0 16px 32px -8px {T["metric_hover"]};
+    transform: translateY(-2px);
+    border-color: {T["h1_border"]}44;
+    box-shadow: 0 20px 40px -20px {T["h1_border"]}55, 0 4px 12px -4px rgba(0,0,0,0.05);
 }}
-/* KPI 値を大きく強調 */
+/* KPI 値: エディトリアル風の巨大数字 */
 div[data-testid="stMetric"] [data-testid="stMetricValue"] {{
-    font-size: 34px !important;
-    font-weight: 800 !important;
-    letter-spacing: -0.03em;
+    font-family: "Space Grotesk", "Inter", sans-serif !important;
+    font-size: 40px !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.04em;
     color: {T["h1_text"]};
-    line-height: 1.1;
+    line-height: 1.05;
+    margin-top: 6px !important;
 }}
-/* KPI ラベル */
+/* KPI ラベル: 小さく、控えめに */
 div[data-testid="stMetric"] label {{
-    font-size: 13px !important;
+    font-size: 11px !important;
     font-weight: 600 !important;
-    color: {T["h3_text"]}bb !important;
-    letter-spacing: 0.02em;
-    text-transform: none;
+    color: rgba(0,0,0,0.55) !important;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }}
-/* Delta (前期比) の色調整 */
+/* Delta */
 div[data-testid="stMetric"] [data-testid="stMetricDelta"] {{
     font-weight: 600 !important;
     font-size: 12px !important;
+    margin-top: 4px;
 }}
 
-/* ─── サイドバー: 薄いガラス感 ─── */
+/* ─── サイドバー: 洗練されたパネル ─── */
 section[data-testid="stSidebar"] {{
-    background: linear-gradient(180deg, {T["sidebar_bg"]} 0%, {T["sidebar_bg"]}dd 100%) !important;
-    border-right: 1px solid {T["sidebar_border"]};
-    box-shadow: inset -1px 0 0 rgba(255,255,255,0.4);
+    background: {T["sidebar_bg"]} !important;
+    border-right: 1px solid rgba(0,0,0,0.06);
+    box-shadow: none;
 }}
 section[data-testid="stSidebar"] h3 {{
+    font-family: "Space Grotesk", "Inter", sans-serif !important;
     color: {T["sidebar_h3"]} !important;
-    font-weight: 700 !important;
-    border-bottom: 1px solid {T["sidebar_h3_border"]} !important;
-    padding-bottom: 6px !important;
+    font-weight: 600 !important;
+    font-size: 14px !important;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    border-bottom: none !important;
+    padding: 0 !important;
+    margin-top: 20px !important;
+    margin-bottom: 12px !important;
+}}
+section[data-testid="stSidebar"] h3::before {{
+    display: none !important;
 }}
 section[data-testid="stSidebar"] h3::after {{
-    display: none;
+    display: none !important;
 }}
 
-/* ─── 区切り線 hr: グラデ細線 ─── */
+/* ─── 区切り線 hr: 超極細 ─── */
 hr {{
     border: none !important;
     height: 1px !important;
-    background: linear-gradient(90deg, transparent 0%, {T["hr_border"]} 20%, {T["hr_border"]} 80%, transparent 100%) !important;
-    margin: 32px 0 !important;
+    background: rgba(0,0,0,0.06) !important;
+    margin: 40px 0 !important;
 }}
 
-/* ─── Tab: 洗練された下線 ─── */
+/* ─── Tab: シャープなアンダーライン ─── */
 button[data-baseweb="tab"] {{
-    font-weight: 600 !important;
-    font-size: 15px !important;
-    letter-spacing: 0.01em;
-    padding: 12px 20px !important;
+    font-weight: 500 !important;
+    font-size: 14px !important;
+    letter-spacing: 0.02em;
+    padding: 12px 4px !important;
+    margin-right: 24px !important;
+    color: rgba(0,0,0,0.5) !important;
     transition: color 0.15s;
 }}
 button[data-baseweb="tab"]:hover {{
@@ -312,114 +381,172 @@ button[data-baseweb="tab"][aria-selected="true"] {{
 }}
 div[data-baseweb="tab-highlight"] {{
     background-color: {T["tab_highlight"]} !important;
-    height: 3px !important;
-    border-radius: 2px !important;
+    height: 2px !important;
+    border-radius: 0 !important;
 }}
 div[data-baseweb="tab-border"] {{
-    background-color: {T["metric_border"]} !important;
+    background-color: rgba(0,0,0,0.06) !important;
 }}
 
-/* ─── データフレーム ─── */
+/* ─── データフレーム: シャープ ─── */
 div[data-testid="stDataFrame"] {{
-    border-radius: 12px;
+    border-radius: 8px;
     overflow: hidden;
-    border: 1px solid {T["df_border"]};
-    box-shadow: 0 4px 12px -4px rgba(0,0,0,0.05);
+    border: 1px solid rgba(0,0,0,0.06);
+    box-shadow: none;
 }}
 
-/* ─── Expander: 洗練されたヘッダ ─── */
+/* ─── Expander: フラットカード ─── */
 details {{
-    border: 1px solid {T["metric_border"]} !important;
-    border-radius: 12px !important;
+    border: 1px solid rgba(0,0,0,0.06) !important;
+    border-radius: 8px !important;
     overflow: hidden;
-    background: rgba(255,255,255,0.5);
+    background: white;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
 }}
 details summary {{
-    background-color: {T["expander_bg"]} !important;
-    border-radius: 12px !important;
-    padding: 12px 16px !important;
+    background-color: white !important;
+    border-radius: 8px !important;
+    padding: 14px 18px !important;
     font-weight: 600 !important;
+    font-size: 13px !important;
+    letter-spacing: 0.02em;
     transition: background-color 0.15s;
+    color: {T["h3_text"]};
 }}
 details summary:hover {{
-    background-color: {T["h1_grad_start"]}66 !important;
+    background-color: {T["h1_grad_end"]}66 !important;
 }}
 details[open] summary {{
-    border-bottom: 1px solid {T["metric_border"]};
-    border-radius: 12px 12px 0 0 !important;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+    border-radius: 8px 8px 0 0 !important;
 }}
 
 /* ─── Caption ─── */
 .stCaption, div[data-testid="stCaptionContainer"] {{
-    color: {T["caption"]} !important;
+    color: rgba(0,0,0,0.5) !important;
     font-size: 12px !important;
     letter-spacing: 0.02em;
+    line-height: 1.5;
 }}
 
-/* ─── ボタン全般 (regular st.button) ─── */
+/* ─── ボタン全般 ─── */
 .stApp button[kind="secondary"],
 .stApp button[kind="primary"] {{
-    border-radius: 10px !important;
+    border-radius: 6px !important;
     font-weight: 600 !important;
+    font-size: 13px !important;
+    letter-spacing: 0.02em;
+    padding: 10px 20px !important;
     transition: transform 0.1s, box-shadow 0.15s;
+    border: 1px solid rgba(0,0,0,0.08) !important;
 }}
 .stApp button[kind="secondary"]:hover,
 .stApp button[kind="primary"]:hover {{
     transform: translateY(-1px);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    box-shadow: 0 6px 16px -6px rgba(0,0,0,0.12);
+    border-color: {T["h1_border"]}66 !important;
 }}
-
-/* ─── multiselect / selectbox のタグ色 ─── */
-[data-baseweb="tag"] {{
-    background-color: {T["h1_border"]}dd !important;
+.stApp button[kind="primary"] {{
+    background-color: {T["h1_border"]} !important;
     color: white !important;
-    border-radius: 8px !important;
+    border: none !important;
+}}
+
+/* ─── multiselect / selectbox のタグ ─── */
+[data-baseweb="tag"] {{
+    background-color: {T["h1_border"]} !important;
+    color: white !important;
+    border-radius: 4px !important;
     font-weight: 600 !important;
+    font-size: 12px !important;
+    letter-spacing: 0.02em;
 }}
 
-/* ─── Plotly グラフをカード化 ─── */
+/* ─── multiselect / selectbox のコンテナ ─── */
+div[data-baseweb="select"] > div,
+div[data-baseweb="input"] > div {{
+    border-radius: 6px !important;
+    border-color: rgba(0,0,0,0.1) !important;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}}
+div[data-baseweb="select"]:hover > div,
+div[data-baseweb="input"]:hover > div {{
+    border-color: {T["h1_border"]}66 !important;
+}}
+div[data-baseweb="select"] > div:focus-within,
+div[data-baseweb="input"] > div:focus-within {{
+    border-color: {T["h1_border"]} !important;
+    box-shadow: 0 0 0 3px {T["h1_border"]}22 !important;
+}}
+
+/* ─── Plotly グラフをフラットカード化 ─── */
 div[data-testid="stPlotlyChart"] {{
-    border-radius: 14px;
-    padding: 8px;
-    background: rgba(255,255,255,0.5);
-    border: 1px solid {T["metric_border"]};
-    box-shadow: 0 4px 14px -6px rgba(0,0,0,0.06);
-    margin-bottom: 8px;
+    border-radius: 10px;
+    padding: 12px;
+    background: white;
+    border: 1px solid rgba(0,0,0,0.06);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    margin-bottom: 12px;
+    transition: box-shadow 0.2s;
+}}
+div[data-testid="stPlotlyChart"]:hover {{
+    box-shadow: 0 10px 30px -12px rgba(0,0,0,0.1);
 }}
 
-/* ブランド切替ピル（独立チップスタイル・大きくして文字省略も解除） */
-.st-key-selected_brand {{
-    margin-bottom: 24px !important;
+/* ─── ラジオ・チェックボックス ─── */
+div[data-baseweb="radio"] label,
+div[data-testid="stCheckbox"] label {{
+    font-size: 13px !important;
+    font-weight: 500 !important;
 }}
-/* コンテナ内を横並び + gap */
+
+/* ─── コード / タイムスタンプ的な要素 ─── */
+code {{
+    background-color: rgba(0,0,0,0.04) !important;
+    color: {T["h1_text"]} !important;
+    border-radius: 4px !important;
+    padding: 2px 6px !important;
+    font-family: "SF Mono", "Menlo", "Monaco", "Consolas", monospace !important;
+    font-size: 90% !important;
+}}
+
+/* ─── ブランド切替ピル: エディトリアル / モノクロベース ─── */
+.st-key-selected_brand {{
+    margin-bottom: 32px !important;
+    margin-top: 4px !important;
+}}
 .st-key-selected_brand [data-baseweb="button-group"],
 .st-key-selected_brand [role="radiogroup"],
 .st-key-selected_brand [role="group"],
 .st-key-selected_brand > div:first-child {{
     display: flex !important;
     flex-wrap: wrap !important;
-    gap: 14px !important;
+    gap: 10px !important;
     justify-content: flex-start !important;
 }}
-/* 各ピルボタン */
 .st-key-selected_brand button,
 .st-key-selected_brand [role="button"],
 .st-key-selected_brand [data-testid*="stBaseButton"] {{
-    font-size: 22px !important;
-    font-weight: 700 !important;
-    padding: 18px 32px !important;
-    min-width: 160px !important;
+    font-family: "Space Grotesk", "Inter", sans-serif !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    padding: 14px 28px !important;
+    min-width: 130px !important;
     height: auto !important;
-    border-radius: 14px !important;
-    letter-spacing: 0.04em;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    transition: transform 0.1s ease, box-shadow 0.15s ease;
+    border-radius: 6px !important;
+    letter-spacing: 0.02em;
+    background: white !important;
+    color: rgba(0,0,0,0.65) !important;
+    border: 1px solid rgba(0,0,0,0.08) !important;
+    box-shadow: none;
+    transition: all 0.18s cubic-bezier(0.2,0.8,0.2,1);
     line-height: 1.2 !important;
     white-space: nowrap !important;
     overflow: visible !important;
     text-overflow: clip !important;
+    position: relative;
 }}
-/* ボタン内側の label / span 要素も省略解除 */
 .st-key-selected_brand button *,
 .st-key-selected_brand [role="button"] * {{
     overflow: visible !important;
@@ -431,18 +558,28 @@ div[data-testid="stPlotlyChart"] {{
 }}
 .st-key-selected_brand button:hover,
 .st-key-selected_brand [role="button"]:hover {{
-    transform: translateY(-2px);
-    box-shadow: 0 5px 12px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+    border-color: {T["h1_border"]}88 !important;
+    color: {T["h1_text"]} !important;
+    box-shadow: 0 8px 20px -8px {T["h1_border"]}55;
 }}
-/* 選択中ピル */
+/* 選択中: ブランド色で塗る */
 .st-key-selected_brand button[aria-pressed="true"],
 .st-key-selected_brand button[aria-checked="true"],
 .st-key-selected_brand [role="button"][aria-pressed="true"],
 .st-key-selected_brand [kind="primary"] {{
-    background-color: {T["h1_border"]} !important;
+    background: linear-gradient(135deg, {T["h1_border"]} 0%, {T["h1_border"]}dd 100%) !important;
     color: white !important;
     border-color: {T["h1_border"]} !important;
-    box-shadow: 0 4px 14px {T["metric_hover"]};
+    box-shadow:
+        0 1px 2px rgba(0,0,0,0.06),
+        0 12px 24px -8px {T["h1_border"]}88 !important;
+}}
+.st-key-selected_brand button[aria-pressed="true"]:hover,
+.st-key-selected_brand button[aria-checked="true"]:hover,
+.st-key-selected_brand [role="button"][aria-pressed="true"]:hover {{
+    transform: translateY(-2px);
+    color: white !important;
 }}
 </style>
 """,
