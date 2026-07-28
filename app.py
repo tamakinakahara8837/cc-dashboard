@@ -160,90 +160,231 @@ if _MULTI_BRAND:
 st.markdown(
     f"""
 <style>
-/* 全体フォント */
-html, body, [class*="css"] {{
-    font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN",
-                 "Yu Gothic", "Meiryo", sans-serif;
+/* Google Fonts: 数字と英字は Inter、和文はヒラギノ系 */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+/* 全体タイポグラフィ */
+html, body, [class*="css"], .stApp, .stApp * {{
+    font-family: "Inter", "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+                 "Yu Gothic", "Meiryo", "Segoe UI", sans-serif;
+    font-feature-settings: "palt", "cv11";
+    -webkit-font-smoothing: antialiased;
 }}
 
-/* h1 のアクセント帯 */
+/* 背景を穏やかにトーン付き（テーマの sidebar_bg をベースにかなり薄めた色） */
+.stApp {{
+    background:
+        radial-gradient(ellipse 1200px 600px at 15% -10%, {T["h1_grad_start"]}44 0%, transparent 60%),
+        radial-gradient(ellipse 1000px 500px at 90% 100%, {T["h1_grad_end"]}66 0%, transparent 60%);
+}}
+
+/* ─── h1: ヒーローヘッダ風の大タイトル ─── */
 .stApp h1 {{
     color: {T["h1_text"]};
-    letter-spacing: 0.02em;
-    padding: 12px 20px;
-    background: linear-gradient(90deg, {T["h1_grad_start"]} 0%, {T["h1_grad_end"]} 100%);
-    border-left: 6px solid {T["h1_border"]};
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    letter-spacing: -0.02em;
+    font-weight: 800 !important;
+    padding: 24px 32px;
+    background: linear-gradient(135deg, {T["h1_grad_start"]} 0%, {T["h1_grad_end"]} 100%);
+    border: 1px solid rgba(0,0,0,0.03);
+    border-left: 8px solid {T["h1_border"]};
+    border-radius: 18px;
+    box-shadow:
+        0 1px 2px rgba(0,0,0,0.04),
+        0 10px 30px -8px rgba(0,0,0,0.08);
+    margin-top: 8px !important;
+    margin-bottom: 12px !important;
+    position: relative;
+    overflow: hidden;
+}}
+/* h1 の右上に微光アクセント */
+.stApp h1::after {{
+    content: "";
+    position: absolute;
+    top: -40%;
+    right: -10%;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(255,255,255,0.5) 0%, transparent 60%);
+    pointer-events: none;
 }}
 
-/* セクション見出し h3 */
+/* ─── h3: モダンな下線見出し（グラデ 2 段） ─── */
 .stApp h3 {{
     color: {T["h3_text"]};
-    margin-top: 28px !important;
-    margin-bottom: 12px !important;
-    padding: 4px 0 8px 0 !important;
-    border-bottom: 2px solid {T["h3_border"]} !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.01em;
+    margin-top: 36px !important;
+    margin-bottom: 14px !important;
+    padding: 4px 0 10px 0 !important;
+    border-bottom: none !important;
+    position: relative;
+}}
+.stApp h3::after {{
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(90deg, {T["h1_border"]} 0%, {T["h3_border"]} 60%, transparent 100%);
+    border-radius: 2px;
 }}
 
-/* KPI カード */
+/* ─── KPI カード: 大きな数字 + 洗練された影 ─── */
 div[data-testid="stMetric"] {{
-    background-color: rgba(255, 255, 255, 0.7);
-    padding: 14px 18px;
-    border-radius: 12px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.7) 100%);
+    padding: 20px 24px 22px 24px;
+    border-radius: 16px;
     border: 1px solid {T["metric_border"]};
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
-    transition: box-shadow 0.15s ease-in-out, transform 0.15s;
+    border-top: 3px solid {T["h1_border"]};
+    box-shadow:
+        0 1px 2px rgba(0,0,0,0.03),
+        0 8px 20px -6px rgba(0,0,0,0.06);
+    transition: transform 0.2s cubic-bezier(0.2,0.8,0.2,1), box-shadow 0.2s;
+    backdrop-filter: blur(4px);
 }}
 div[data-testid="stMetric"]:hover {{
-    box-shadow: 0 4px 10px {T["metric_hover"]};
-    transform: translateY(-1px);
+    transform: translateY(-3px);
+    box-shadow:
+        0 2px 4px rgba(0,0,0,0.04),
+        0 16px 32px -8px {T["metric_hover"]};
+}}
+/* KPI 値を大きく強調 */
+div[data-testid="stMetric"] [data-testid="stMetricValue"] {{
+    font-size: 34px !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.03em;
+    color: {T["h1_text"]};
+    line-height: 1.1;
+}}
+/* KPI ラベル */
+div[data-testid="stMetric"] label {{
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: {T["h3_text"]}bb !important;
+    letter-spacing: 0.02em;
+    text-transform: none;
+}}
+/* Delta (前期比) の色調整 */
+div[data-testid="stMetric"] [data-testid="stMetricDelta"] {{
+    font-weight: 600 !important;
+    font-size: 12px !important;
 }}
 
-/* サイドバー */
+/* ─── サイドバー: 薄いガラス感 ─── */
 section[data-testid="stSidebar"] {{
-    background-color: {T["sidebar_bg"]} !important;
+    background: linear-gradient(180deg, {T["sidebar_bg"]} 0%, {T["sidebar_bg"]}dd 100%) !important;
     border-right: 1px solid {T["sidebar_border"]};
+    box-shadow: inset -1px 0 0 rgba(255,255,255,0.4);
 }}
 section[data-testid="stSidebar"] h3 {{
     color: {T["sidebar_h3"]} !important;
+    font-weight: 700 !important;
     border-bottom: 1px solid {T["sidebar_h3_border"]} !important;
+    padding-bottom: 6px !important;
+}}
+section[data-testid="stSidebar"] h3::after {{
+    display: none;
 }}
 
-/* 区切り線 hr */
+/* ─── 区切り線 hr: グラデ細線 ─── */
 hr {{
     border: none !important;
-    border-top: 1px dashed {T["hr_border"]} !important;
-    margin: 24px 0 !important;
+    height: 1px !important;
+    background: linear-gradient(90deg, transparent 0%, {T["hr_border"]} 20%, {T["hr_border"]} 80%, transparent 100%) !important;
+    margin: 32px 0 !important;
 }}
 
-/* Tab のアクティブラベル */
+/* ─── Tab: 洗練された下線 ─── */
 button[data-baseweb="tab"] {{
-    font-weight: 500;
+    font-weight: 600 !important;
+    font-size: 15px !important;
+    letter-spacing: 0.01em;
+    padding: 12px 20px !important;
+    transition: color 0.15s;
+}}
+button[data-baseweb="tab"]:hover {{
+    color: {T["tab_active"]} !important;
 }}
 button[data-baseweb="tab"][aria-selected="true"] {{
     color: {T["tab_active"]} !important;
+    font-weight: 700 !important;
 }}
 div[data-baseweb="tab-highlight"] {{
     background-color: {T["tab_highlight"]} !important;
+    height: 3px !important;
+    border-radius: 2px !important;
+}}
+div[data-baseweb="tab-border"] {{
+    background-color: {T["metric_border"]} !important;
 }}
 
-/* データフレームの罫線 */
+/* ─── データフレーム ─── */
 div[data-testid="stDataFrame"] {{
-    border-radius: 8px;
+    border-radius: 12px;
     overflow: hidden;
     border: 1px solid {T["df_border"]};
+    box-shadow: 0 4px 12px -4px rgba(0,0,0,0.05);
 }}
 
-/* Expander */
+/* ─── Expander: 洗練されたヘッダ ─── */
+details {{
+    border: 1px solid {T["metric_border"]} !important;
+    border-radius: 12px !important;
+    overflow: hidden;
+    background: rgba(255,255,255,0.5);
+}}
 details summary {{
     background-color: {T["expander_bg"]} !important;
-    border-radius: 6px !important;
+    border-radius: 12px !important;
+    padding: 12px 16px !important;
+    font-weight: 600 !important;
+    transition: background-color 0.15s;
+}}
+details summary:hover {{
+    background-color: {T["h1_grad_start"]}66 !important;
+}}
+details[open] summary {{
+    border-bottom: 1px solid {T["metric_border"]};
+    border-radius: 12px 12px 0 0 !important;
 }}
 
-/* Caption */
+/* ─── Caption ─── */
 .stCaption, div[data-testid="stCaptionContainer"] {{
     color: {T["caption"]} !important;
+    font-size: 12px !important;
+    letter-spacing: 0.02em;
+}}
+
+/* ─── ボタン全般 (regular st.button) ─── */
+.stApp button[kind="secondary"],
+.stApp button[kind="primary"] {{
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+    transition: transform 0.1s, box-shadow 0.15s;
+}}
+.stApp button[kind="secondary"]:hover,
+.stApp button[kind="primary"]:hover {{
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}}
+
+/* ─── multiselect / selectbox のタグ色 ─── */
+[data-baseweb="tag"] {{
+    background-color: {T["h1_border"]}dd !important;
+    color: white !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+}}
+
+/* ─── Plotly グラフをカード化 ─── */
+div[data-testid="stPlotlyChart"] {{
+    border-radius: 14px;
+    padding: 8px;
+    background: rgba(255,255,255,0.5);
+    border: 1px solid {T["metric_border"]};
+    box-shadow: 0 4px 14px -6px rgba(0,0,0,0.06);
+    margin-bottom: 8px;
 }}
 
 /* ブランド切替ピル（独立チップスタイル・大きくして文字省略も解除） */
