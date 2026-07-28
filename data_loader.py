@@ -92,6 +92,40 @@ def load_brand_name() -> str:
         return DEFAULT_BRAND_NAME
 
 
+def load_shared_config() -> "dict[str, str]":
+    """全ブランド共通の埋め込みリソース設定を Secrets から読む。
+
+    Secrets 例::
+
+        [shared]
+        line_management_url = "https://docs.google.com/spreadsheets/d/e/xxx/pubhtml"
+
+    - `line_management_url`: 回線管理表（Google Sheets）の pubhtml URL。
+      指定されていればダッシュボード上部に iframe で埋め込む。
+    """
+    empty: dict[str, str] = {}
+    try:
+        secrets_obj = getattr(st, "secrets", None)
+        if secrets_obj is None:
+            return empty
+        try:
+            raw = secrets_obj["shared"]
+        except Exception:
+            return empty
+        if not raw:
+            return empty
+        result: dict[str, str] = {}
+        try:
+            for k, v in dict(raw).items():
+                if v:
+                    result[str(k)] = str(v)
+        except Exception:
+            return empty
+        return result
+    except BaseException:
+        return empty
+
+
 def load_brands_config() -> "dict[str, dict]":
     """マルチブランド構成を読む。`[brands.<key>]` セクション群を辞書化。
 

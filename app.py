@@ -35,6 +35,7 @@ from data_loader import (
     load_brand_name,
     load_brands_config,
     load_data,
+    load_shared_config,
     load_special_course_name,
     load_theme_name,
     previous_period,
@@ -429,6 +430,25 @@ st.caption(
         if prev_df is not None else ""
     )
 )
+
+# ─────────────────────────────────────────────
+# 🔌 回線管理表（全ブランド共通・Secrets の [shared] に URL を書いた時のみ表示）
+# 曜日×時間帯の複雑な集計表は Google Sheets の見た目そのままが読みやすいので iframe 埋め込み
+# ─────────────────────────────────────────────
+_shared_cfg: dict = load_shared_config()
+_line_mgmt_url: str = _shared_cfg.get("line_management_url", "")
+if _line_mgmt_url:
+    with st.expander("🔌 全ブランド共通 回線管理表を開く"):
+        # pubhtml URL に `?widget=true&headers=false` を付けると余白の少ないビューになる
+        _embed_url = _line_mgmt_url
+        if "widget=true" not in _embed_url:
+            _sep = "&" if "?" in _embed_url else "?"
+            _embed_url = f"{_embed_url}{_sep}widget=true&headers=false"
+        import streamlit.components.v1 as _components
+        _components.iframe(_embed_url, height=650, scrolling=True)
+        st.caption(
+            f"※ 元シートを直接開く: [Google Sheets で見る]({_line_mgmt_url})"
+        )
 
 if not call_centers:
     st.warning("コールセンターを 1 つ以上選択してください。")
